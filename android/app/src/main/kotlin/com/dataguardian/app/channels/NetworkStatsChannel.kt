@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Handler
@@ -22,14 +23,15 @@ import java.util.concurrent.Executors
 private const val CHANNEL = "com.dataguardian/network_stats"
 
 /**
- * Queries per-app mobile and Wi-Fi data usage via [NetworkStatsManager].
+ * Bridges Flutter to Android's [NetworkStatsManager] API.
  *
- * Returns both foreground and background bytes for each transport, plus
- * whether the app is a system app and its Base64-encoded icon.
+ * Per-app foreground/background bytes are split using [NetworkStats.Bucket.STATE_FOREGROUND]
+ * vs [NetworkStats.Bucket.STATE_DEFAULT]. On devices where the driver does not split traffic
+ * state (bucket.state == STATE_ALL), all bytes are counted as foreground to avoid under-counting.
  *
- * OEM restriction: on some devices (MIUI, EMUI) NetworkStatsManager returns
- * zeros or throws SecurityException. The repository layer handles this by
- * catching the exception and showing a banner to the user.
+ * OEM restriction (MIUI, EMUI, ColorOS): [NetworkStatsManager.querySummary] may throw
+ * [SecurityException] or return all-zero buckets even when permission is granted.
+ * The Dart repository layer handles this by catching the error code and showing a banner.
  */
 class NetworkStatsChannel(private val activity: MainActivity) {
 
@@ -40,159 +42,178 @@ class NetworkStatsChannel(private val activity: MainActivity) {
         MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "getNetworkStats" -> {
-                        if (!activity.isUsageAccessGranted()) {
-                            result.error(
-                                "USAGE_ACCESS_REQUIRED",
-                                "Grant usage access in Settings.",
-                                null
-                            )
-                            return@setMethodCallHandler
-                        }
-                        val args = call.arguments as? Map<*, *>
-                        val startMs = (args?.get("startMs") as? Number)?.toLong()
-                            ?: System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
-                        val endMs = (args?.get("endMs") as? Number)?.toLong()
-                            ?: System.currentTimeMillis()
-
-                        executor.execute {
-                            try {
-                                val stats = queryAllStats(startMs, endMs)
-                                mainHandler.post { result.success(stats) }
-                            } catch (e: SecurityException) {
-                                mainHandler.post {
-                                    result.error(
-                                        "NETWORK_STATS_RESTRICTED",
-                                        "Per-app data unavailable on this device.",
-                                        e.message
-                                    )
-                                }
-                            } catch (e: Exception) {
-                                mainHandler.post {
-                                    result.error("NETWORK_STATS_FAILED", e.message, null)
-                                }
-                            }
-                        }
-                    }
-
-                    "getNetworkStatsByUid" -> {
-                        // Phase 2 — stub
-                        result.success(emptyMap<String, Any>())
-                    }
-
+                    "getNetworkStats" -> handleGetNetworkStats(call.arguments, result)
+                    "getNetworkStatsByUid" -> handleGetNetworkStatsByUid(call.arguments, result)
                     else -> result.notImplemented()
                 }
             }
     }
 
-    private fun queryAllStats(startMs: Long, endMs: Long): List<Map<String, Any?>> {
-        val pm = activity.packageManager
+    // ── getNetworkStats ──────────────────────────────────────────────────────
+
+    private fun handleGetNetworkStats(rawArgs: Any?, result: MethodChannel.Result) {
+        if (!activity.isUsageAccessGranted()) {
+            result.error("USAGE_ACCESS_REQUIRED", "Grant usage access in Settings.", null)
+            return
+        }
+        val args = rawArgs as? Map<*, *>
+        val startMs = (args?.get("startMs") as? Number)?.toLong() ?: defaultStartMs()
+        val endMs   = (args?.get("endMs")   as? Number)?.toLong() ?: System.currentTimeMillis()
+
+        executor.execute {
+            try {
+                val stats = buildAppStatsList(startMs, endMs)
+                mainHandler.post { result.success(stats) }
+            } catch (e: SecurityException) {
+                mainHandler.post {
+                    result.error("NETWORK_STATS_RESTRICTED", "Per-app data unavailable on this device.", e.message)
+                }
+            } catch (e: Exception) {
+                mainHandler.post {
+                    result.error("NETWORK_STATS_FAILED", e.message, null)
+                }
+            }
+        }
+    }
+
+    // ── getNetworkStatsByUid ─────────────────────────────────────────────────
+
+    private fun handleGetNetworkStatsByUid(rawArgs: Any?, result: MethodChannel.Result) {
+        if (!activity.isUsageAccessGranted()) {
+            result.error("USAGE_ACCESS_REQUIRED", "Grant usage access in Settings.", null)
+            return
+        }
+        val args    = rawArgs as? Map<*, *>
+        val uid     = (args?.get("uid")     as? Number)?.toInt()  ?: run { result.error("INVALID_ARG", "uid required", null); return }
+        val startMs = (args?.get("startMs") as? Number)?.toLong() ?: defaultStartMs()
+        val endMs   = (args?.get("endMs")   as? Number)?.toLong() ?: System.currentTimeMillis()
+
+        executor.execute {
+            try {
+                val bytes = queryBytesByUid(uid, startMs, endMs)
+                mainHandler.post {
+                    result.success(mapOf(
+                        "mobileForegroundBytes" to bytes.mobileFg,
+                        "mobileBackgroundBytes" to bytes.mobileBg,
+                        "wifiForegroundBytes"   to bytes.wifiFg,
+                        "wifiBackgroundBytes"   to bytes.wifiBg,
+                        "periodStart"           to startMs,
+                        "periodEnd"             to endMs,
+                    ))
+                }
+            } catch (e: SecurityException) {
+                mainHandler.post {
+                    result.error("NETWORK_STATS_RESTRICTED", "Per-app data unavailable on this device.", e.message)
+                }
+            } catch (e: Exception) {
+                mainHandler.post {
+                    result.error("NETWORK_STATS_FAILED", e.message, null)
+                }
+            }
+        }
+    }
+
+    // ── core query helpers ───────────────────────────────────────────────────
+
+    /**
+     * Builds the complete per-app stats list for [startMs]..[endMs].
+     * Icons are decoded only for this page; zero-usage apps are excluded.
+     */
+    private fun buildAppStatsList(startMs: Long, endMs: Long): List<Map<String, Any?>> {
+        val pm  = activity.packageManager
         val nsm = activity.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
 
-        // Build UID → (mobileFg, mobileBg, wifiFg, wifiBg) map
-        data class Bytes(
-            var mobileFg: Long = 0L,
-            var mobileBg: Long = 0L,
-            var wifiFg: Long = 0L,
-            var wifiBg: Long = 0L,
-        )
-        val byUid = mutableMapOf<Int, Bytes>()
+        val byUid = mutableMapOf<Int, UsageBytes>()
+        accumulateTransport(nsm, ConnectivityManager.TYPE_MOBILE, startMs, endMs, byUid)
+        accumulateTransport(nsm, ConnectivityManager.TYPE_WIFI,   startMs, endMs, byUid)
 
-        fun accumulateBuckets(bucket: NetworkStats.Bucket, transport: Int) {
-            val uid = bucket.uid
-            if (uid < 0) return
-            val b = byUid.getOrPut(uid) { Bytes() }
-            val rx = bucket.rxBytes
-            val tx = bucket.txBytes
-            val isFg = bucket.state == NetworkStats.Bucket.STATE_FOREGROUND
-            when (transport) {
-                ConnectivityManager.TYPE_MOBILE -> if (isFg) {
-                    b.mobileFg += rx + tx
-                } else {
-                    b.mobileBg += rx + tx
-                }
-                ConnectivityManager.TYPE_WIFI -> if (isFg) {
-                    b.wifiFg += rx + tx
-                } else {
-                    b.wifiBg += rx + tx
-                }
-            }
-        }
+        // Deduplicate UIDs: multiple packages may share a UID (common for system apps).
+        // Keep only the first package encountered per UID.
+        val seenUids = mutableSetOf<Int>()
+        val result   = mutableListOf<Map<String, Any?>>()
 
-        // Mobile stats
-        queryBuckets(nsm, ConnectivityManager.TYPE_MOBILE, startMs, endMs) {
-            accumulateBuckets(it, ConnectivityManager.TYPE_MOBILE)
-        }
-        // Wi-Fi stats
-        queryBuckets(nsm, ConnectivityManager.TYPE_WIFI, startMs, endMs) {
-            accumulateBuckets(it, ConnectivityManager.TYPE_WIFI)
-        }
+        for (info in pm.getInstalledApplications(0)) {
+            val uid = info.uid
+            if (!seenUids.add(uid)) continue          // already handled this UID
 
-        val installedApps = getInstalledApps(pm)
-        val result = mutableListOf<Map<String, Any?>>()
+            val bytes    = byUid[uid] ?: continue     // no usage → skip
+            val totalAll = bytes.mobileFg + bytes.mobileBg + bytes.wifiFg + bytes.wifiBg
+            if (totalAll == 0L) continue              // zero-usage → exclude per requirement
 
-        for ((uid, label, pkgName, isSystem) in installedApps) {
-            val bytes = byUid[uid] ?: continue
-            val totalMobile = bytes.mobileFg + bytes.mobileBg
-            val totalWifi = bytes.wifiFg + bytes.wifiBg
-            if (totalMobile == 0L && totalWifi == 0L) continue // exclude zero-usage apps
-
-            val icon = try {
-                drawableToBase64(pm.getApplicationIcon(pkgName))
-            } catch (_: PackageManager.NameNotFoundException) {
-                null
-            }
+            val label    = pm.getApplicationLabel(info).toString()
+            val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            val icon     = runCatching { drawableToBase64(pm.getApplicationIcon(info.packageName)) }.getOrNull()
 
             result += mapOf(
-                "packageName" to pkgName,
-                "appName" to label,
-                "mobileForegroundBytes" to totalMobile,   // simplified: full query returns total per uid
-                "mobileBackgroundBytes" to 0L,            // background split — Phase 2 refinement
-                "wifiForegroundBytes" to totalWifi,
-                "wifiBackgroundBytes" to 0L,
-                "foregroundTimeMs" to 0L,
-                "periodStart" to startMs,
-                "periodEnd" to endMs,
-                "appIconBase64" to icon,
-                "isSystemApp" to isSystem,
+                "packageName"           to info.packageName,
+                "appName"               to label,
+                "mobileForegroundBytes" to bytes.mobileFg,
+                "mobileBackgroundBytes" to bytes.mobileBg,
+                "wifiForegroundBytes"   to bytes.wifiFg,
+                "wifiBackgroundBytes"   to bytes.wifiBg,
+                "foregroundTimeMs"      to 0L,   // populated by UsageStatsChannel merge in Dart
+                "periodStart"           to startMs,
+                "periodEnd"             to endMs,
+                "appIconBase64"         to icon,
+                "isSystemApp"           to isSystem,
             )
         }
-
         return result
     }
 
-    private fun queryBuckets(
-        nsm: NetworkStatsManager,
+    /**
+     * Returns bytes for a single [uid] across [startMs]..[endMs].
+     * Used by the background spike-detection service.
+     */
+    private fun queryBytesByUid(uid: Int, startMs: Long, endMs: Long): UsageBytes {
+        val nsm   = activity.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
+        val bytes = UsageBytes()
+        val byUid = mutableMapOf(uid to bytes)
+        accumulateTransport(nsm, ConnectivityManager.TYPE_MOBILE, startMs, endMs, byUid, filterUid = uid)
+        accumulateTransport(nsm, ConnectivityManager.TYPE_WIFI,   startMs, endMs, byUid, filterUid = uid)
+        return bytes
+    }
+
+    /**
+     * Iterates all [NetworkStats.Bucket]s for [transportType] and accumulates
+     * rx+tx bytes into [byUid], splitting foreground vs background by bucket state.
+     *
+     * [filterUid] — when non-null, only buckets for that UID are accumulated (faster
+     * path used by [queryBytesByUid]).
+     */
+    private fun accumulateTransport(
+        nsm:          NetworkStatsManager,
         transportType: Int,
-        startMs: Long,
-        endMs: Long,
-        onBucket: (NetworkStats.Bucket) -> Unit,
+        startMs:      Long,
+        endMs:        Long,
+        byUid:        MutableMap<Int, UsageBytes>,
+        filterUid:    Int? = null,
     ) {
-        val stats = nsm.querySummary(transportType, null, startMs, endMs)
+        val stats  = nsm.querySummary(transportType, null, startMs, endMs)
         val bucket = NetworkStats.Bucket()
         while (stats.hasNextBucket()) {
             stats.getNextBucket(bucket)
-            onBucket(bucket)
+            val uid = bucket.uid
+            if (uid < 0) continue
+            if (filterUid != null && uid != filterUid) continue
+
+            val entry  = byUid.getOrPut(uid) { UsageBytes() }
+            val bytes  = bucket.rxBytes + bucket.txBytes
+            val isFg   = bucket.state == NetworkStats.Bucket.STATE_FOREGROUND
+            // STATE_ALL (-1) means the driver didn't split: treat as foreground to avoid under-counting.
+            val isBg   = bucket.state == NetworkStats.Bucket.STATE_DEFAULT
+
+            when (transportType) {
+                ConnectivityManager.TYPE_MOBILE -> if (isBg) entry.mobileBg += bytes else entry.mobileFg += bytes
+                ConnectivityManager.TYPE_WIFI   -> if (isBg) entry.wifiBg   += bytes else entry.wifiFg   += bytes
+            }
         }
         stats.close()
     }
 
-    private data class AppEntry(val uid: Int, val label: String, val packageName: String, val isSystem: Boolean)
+    // ── icon encoding ────────────────────────────────────────────────────────
 
-    private fun getInstalledApps(pm: PackageManager): List<AppEntry> {
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            PackageManager.MATCH_UNINSTALLED_PACKAGES.toLong().toInt()
-        } else {
-            @Suppress("DEPRECATION") PackageManager.GET_UNINSTALLED_PACKAGES
-        }
-        return pm.getInstalledApplications(flags).map { info ->
-            val label = pm.getApplicationLabel(info).toString()
-            val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            AppEntry(info.uid, label, info.packageName, isSystem)
-        }
-    }
-
-    private fun drawableToBase64(drawable: android.graphics.drawable.Drawable): String {
+    private fun drawableToBase64(drawable: Drawable): String {
         val src = if (drawable is BitmapDrawable && drawable.bitmap != null) {
             drawable.bitmap
         } else {
@@ -210,4 +231,16 @@ class NetworkStatsChannel(private val activity: MainActivity) {
             Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
         }
     }
+
+    private fun defaultStartMs(): Long =
+        System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
+
+    // ── data class ──────────────────────────────────────────────────────────
+
+    data class UsageBytes(
+        var mobileFg: Long = 0L,
+        var mobileBg: Long = 0L,
+        var wifiFg:   Long = 0L,
+        var wifiBg:   Long = 0L,
+    )
 }
