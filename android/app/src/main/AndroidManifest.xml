@@ -1,0 +1,72 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Usage & network stats (non-standard — user must grant in Settings) -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions"
+        xmlns:tools="http://schemas.android.com/tools" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission"
+        xmlns:tools="http://schemas.android.com/tools" />
+
+    <!-- Notifications (runtime on API 33+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Background service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Reboot survival -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Battery optimisation exemption request -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Required for NetworkStatsManager -->
+    <uses-permission android:name="android.permission.READ_NETWORK_USAGE_HISTORY"
+        tools:ignore="ProtectedPermissions"
+        xmlns:tools="http://schemas.android.com/tools"/>
+
+    <application
+        android:label="Data Guardian"
+        android:name="com.dataguardian.app.DataGuardianApplication"
+        android:icon="@drawable/ic_launcher"
+        android:requestLegacyExternalStorage="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- flutter_background_service foreground service (Phase 6) -->
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- Restart background service after device reboot (Phase 6) -->
+        <receiver
+            android:name="com.dataguardian.app.BootCompletedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+</manifest>
