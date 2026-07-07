@@ -12,7 +12,7 @@ _$UserPreferencesImpl _$$UserPreferencesImplFromJson(
       dailyThresholdBytes: (json['dailyThresholdBytes'] as num?)?.toInt(),
       weeklyThresholdBytes: (json['weeklyThresholdBytes'] as num?)?.toInt(),
       spikeThresholdMultiplier:
-          (json['spikeThresholdMultiplier'] as num?)?.toDouble() ?? 1.75,
+          (json['spikeThresholdMultiplier'] as num?)?.toDouble() ?? 1.5,
       backgroundThresholdBytes:
           (json['backgroundThresholdBytes'] as num?)?.toInt(),
       billingCycleStartDay:

@@ -8,7 +8,7 @@ class UserPreferences with _$UserPreferences {
   const factory UserPreferences({
     int? dailyThresholdBytes,
     int? weeklyThresholdBytes,
-    @Default(1.75) double spikeThresholdMultiplier,
+    @Default(1.5) double spikeThresholdMultiplier,
     int? backgroundThresholdBytes,
     /// 1–28 or -1 if not set (use last 30 days instead).
     @Default(-1) int billingCycleStartDay,
