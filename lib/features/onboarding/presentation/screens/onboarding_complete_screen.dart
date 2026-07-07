@@ -37,7 +37,13 @@ class OnboardingCompleteScreen extends StatelessWidget {
               FilledButton(
                 onPressed: () async {
                   await getIt<SharedPrefsService>().setOnboardingComplete(true);
-                  await getIt<IBackgroundServiceManager>().startService();
+                  final manager = getIt<IBackgroundServiceManager>();
+                  await manager.startService();
+                  // Ask to be exempted from battery optimization so the monitor
+                  // keeps running when the app is closed. Skip if already exempt.
+                  if (!await manager.isIgnoringBatteryOptimizations()) {
+                    await manager.requestIgnoreBatteryOptimizations();
+                  }
                   if (context.mounted) context.goNamed(RouteNames.dashboard);
                 },
                 child: const Padding(

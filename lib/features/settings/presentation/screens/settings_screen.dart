@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../services/background/i_background_service_manager.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -89,6 +90,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
           const SizedBox(height: 8),
 
+          // ── Background monitoring ─────────────────────────────────────────
+          Text('Background monitoring',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          const _BatteryOptimizationTile(),
+          const Divider(),
+          const SizedBox(height: 8),
+
           // ── Billing Cycle ─────────────────────────────────────────────────
           Text('Billing cycle',
               style: Theme.of(context)
@@ -128,6 +140,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : const Text('Save settings'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shows whether the app is exempt from battery optimization and lets the user
+/// grant the exemption — the main lever for keeping the background monitor
+/// alive on aggressive OEMs (Samsung, Xiaomi, etc.).
+class _BatteryOptimizationTile extends StatefulWidget {
+  const _BatteryOptimizationTile();
+
+  @override
+  State<_BatteryOptimizationTile> createState() =>
+      _BatteryOptimizationTileState();
+}
+
+class _BatteryOptimizationTileState extends State<_BatteryOptimizationTile>
+    with WidgetsBindingObserver {
+  final _manager = getIt<IBackgroundServiceManager>();
+  bool? _exempt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-check when returning from the system battery-optimization dialog.
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final exempt = await _manager.isIgnoringBatteryOptimizations();
+    if (mounted) setState(() => _exempt = exempt);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final exempt = _exempt;
+
+    if (exempt == true) {
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(Icons.check_circle_rounded, color: scheme.primary),
+        title: const Text('Unrestricted background access'),
+        subtitle: const Text(
+            'Data Guardian can monitor usage and send alerts reliably.'),
+      );
+    }
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(Icons.battery_alert_rounded, color: scheme.error),
+      title: const Text('Allow unrestricted background use'),
+      subtitle: const Text(
+          'Without this, your device may stop Data Guardian in the background '
+          'and alerts can be delayed or missed.'),
+      trailing: TextButton(
+        onPressed: exempt == null
+            ? null
+            : () => _manager.requestIgnoreBatteryOptimizations(),
+        child: const Text('Allow'),
       ),
     );
   }

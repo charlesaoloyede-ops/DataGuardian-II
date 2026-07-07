@@ -3,23 +3,17 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/date_range_utils.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
 import '../../../app_usage/domain/entities/app_usage_record.dart';
-import '../../../app_usage/domain/i_daily_usage_repository.dart';
 import '../../../app_usage/domain/i_network_stats_repository.dart';
-import '../../../app_usage/domain/use_cases/sync_daily_usage_use_case.dart';
 import '../entities/dashboard_summary.dart';
 
 @injectable
 class GetDashboardSummaryUseCase {
   final INetworkStatsRepository _networkRepo;
-  final IDailyUsageRepository _dailyRepo;
   final SharedPrefsService _prefs;
-  final SyncDailyUsageUseCase _syncDailyUsage;
 
   const GetDashboardSummaryUseCase(
     this._networkRepo,
-    this._dailyRepo,
     this._prefs,
-    this._syncDailyUsage,
   );
 
   Future<DashboardSummary> call() async {
@@ -28,21 +22,23 @@ class GetDashboardSummaryUseCase {
     final billingFilter = DateRangeFilter.billingCycle(
       prefs.billingCycleStartDay > 0 ? prefs.billingCycleStartDay : null,
     );
+    // 7-day chart window: the last 7 calendar days ending today.
+    final sevenDayFilter = DateRangeFilter.last7Days();
 
-    // Fire all queries concurrently. Syncing today's usage into Hive lets the
-    // background service (no platform-channel access in its isolate) evaluate
-    // spike/threshold alerts against fresh data.
+    // Fire all queries concurrently.
     final billingTotalFuture = _networkRepo.getTotalMobileUsage(
         start: billingFilter.start, end: billingFilter.end);
     final allAppsFuture = _networkRepo.getAppUsage(
         start: billingFilter.start, end: billingFilter.end);
-    final last7DaysFuture = _dailyRepo.getLast7Days();
-    final syncFuture = _syncDailyUsage();
+    // Read the 7-day series live (same NetworkStatsManager source as the App
+    // Usage screen) so the chart stays consistent with the rest of the app
+    // instead of relying on sparse, opportunistically-written Hive snapshots.
+    final last7DaysFuture = _networkRepo.getDailyTotals(
+        start: sevenDayFilter.start, end: sevenDayFilter.end);
 
     final billingTotal = await billingTotalFuture;
     final allApps      = await allAppsFuture;
     final last7Days    = await last7DaysFuture;
-    await syncFuture;
 
     // Top apps — personal-first, then descending by mobile bytes.
     final sorted = List<AppUsageRecord>.from(allApps)
@@ -52,8 +48,6 @@ class GetDashboardSummaryUseCase {
       });
     final topApps = sorted.take(AppConstants.dashboardTopAppsCount).toList();
 
-    final hasAnomaly = last7Days.any((d) => d.isAnomaly);
-
     return DashboardSummary(
       billingCycleMobileBytes: billingTotal,
       billingCycleMobileLimit: null, // monthly limit not yet in UserPreferences
@@ -61,7 +55,20 @@ class GetDashboardSummaryUseCase {
       topApps: topApps,
       allApps: allApps,
       billingCycleStart: billingFilter.start,
-      hasAnomaly: hasAnomaly,
+      hasAnomaly: _isAnomalous(last7Days, prefs.spikeThresholdMultiplier),
     );
+  }
+
+  /// Flags an anomaly when today's mobile usage exceeds [multiplier]× the
+  /// average of the preceding days that had any usage.
+  bool _isAnomalous(List<dynamic> days, double multiplier) {
+    if (days.length < 2) return false;
+    final today = days.last.totalMobileBytes as int;
+    final prior = days.sublist(0, days.length - 1);
+    final withUsage = prior.where((d) => (d.totalMobileBytes as int) > 0).toList();
+    if (withUsage.length < AppConstants.minBaselineDays) return false;
+    final avg = withUsage.fold<int>(0, (s, d) => s + (d.totalMobileBytes as int)) /
+        withUsage.length;
+    return avg > 0 && today > avg * multiplier;
   }
 }

@@ -66,4 +66,6 @@ flutter {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation("androidx.core:core-ktx:1.13.1")
+    // Background usage monitoring (survives app kill / reboot).
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }

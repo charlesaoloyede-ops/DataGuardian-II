@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import '../domain/entities/app_usage_record.dart';
+import '../domain/entities/daily_usage_summary.dart';
 import '../domain/i_network_stats_repository.dart';
 import '../../../core/analytics/i_analytics_service.dart';
 import '../../../core/constants/app_constants.dart';
@@ -93,6 +94,36 @@ class AppUsageRepositoryImpl implements INetworkStatsRepository {
     } on NetworkStatsRestrictedException {
       // Return 0 so the Dashboard billing-cycle card still renders.
       return 0;
+    }
+  }
+
+  @override
+  Future<List<DailyUsageSummary>> getDailyTotals({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final args = {
+      'startMs': start.millisecondsSinceEpoch,
+      'endMs': end.millisecondsSinceEpoch,
+    };
+    try {
+      final raw = await _networkChannel
+          .invokeMethod<List<dynamic>>('getDailyTotals', args);
+      if (raw == null) return [];
+      return raw.cast<Map<dynamic, dynamic>>().map((m) {
+        final mobile = (m['mobileBytes'] as num?)?.toInt() ?? 0;
+        final wifi = (m['wifiBytes'] as num?)?.toInt() ?? 0;
+        return DailyUsageSummary(
+          date: DateTime.fromMillisecondsSinceEpoch((m['startMs'] as num).toInt()),
+          totalMobileBytes: mobile,
+          mobileForegroundBytes: mobile,
+          mobileBackgroundBytes: 0,
+          totalWifiBytes: wifi,
+        );
+      }).toList();
+    } on PlatformException {
+      // Chart degrades to empty state on OEM restriction / failure.
+      return [];
     }
   }
 

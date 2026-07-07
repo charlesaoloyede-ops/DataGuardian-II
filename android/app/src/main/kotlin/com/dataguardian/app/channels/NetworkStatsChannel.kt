@@ -44,9 +44,48 @@ class NetworkStatsChannel(private val activity: MainActivity) {
                 when (call.method) {
                     "getNetworkStats" -> handleGetNetworkStats(call.arguments, result)
                     "getNetworkStatsByUid" -> handleGetNetworkStatsByUid(call.arguments, result)
+                    "getDailyTotals" -> handleGetDailyTotals(call.arguments, result)
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    // ── getDailyTotals ───────────────────────────────────────────────────────
+
+    /**
+     * Returns one entry per calendar day in the window with device-level mobile
+     * and Wi-Fi totals. Backs the dashboard 7-day chart so it reads from the
+     * same live NetworkStatsManager source as the App Usage screen.
+     */
+    private fun handleGetDailyTotals(rawArgs: Any?, result: MethodChannel.Result) {
+        if (!activity.isUsageAccessGranted()) {
+            result.error("USAGE_ACCESS_REQUIRED", "Grant usage access in Settings.", null)
+            return
+        }
+        val args    = rawArgs as? Map<*, *>
+        val startMs = (args?.get("startMs") as? Number)?.toLong() ?: defaultStartMs()
+        val endMs   = (args?.get("endMs")   as? Number)?.toLong() ?: System.currentTimeMillis()
+
+        executor.execute {
+            try {
+                val days = com.dataguardian.app.monitor.NetworkStatsQuery
+                    .dailyTotals(activity, startMs, endMs)
+                    .map {
+                        mapOf(
+                            "startMs"     to it.startMs,
+                            "mobileBytes" to it.mobileBytes,
+                            "wifiBytes"   to it.wifiBytes,
+                        )
+                    }
+                mainHandler.post { result.success(days) }
+            } catch (e: SecurityException) {
+                mainHandler.post {
+                    result.error("NETWORK_STATS_RESTRICTED", "Per-app data unavailable on this device.", e.message)
+                }
+            } catch (e: Exception) {
+                mainHandler.post { result.error("NETWORK_STATS_FAILED", e.message, null) }
+            }
+        }
     }
 
     // ── getNetworkStats ──────────────────────────────────────────────────────

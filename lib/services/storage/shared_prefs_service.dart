@@ -63,4 +63,20 @@ class SharedPrefsService {
 
   Future<void> setBudgetAlertCycleKey(String key) =>
       _prefs.setString('budget_alert_cycle_key', key);
+
+  /// Reads and clears alerts the native background monitor
+  /// ([UsageMonitorWorker]) fired while the app was closed, so the foreground
+  /// app can persist them to the Alerts Center. Each entry has `type`,
+  /// `message`, and `triggeredAtMs`.
+  Future<List<Map<String, dynamic>>> drainPendingNativeAlerts() async {
+    final json = _prefs.getString('pending_native_alerts');
+    if (json == null || json.isEmpty) return [];
+    await _prefs.remove('pending_native_alerts');
+    try {
+      final decoded = jsonDecode(json) as List<dynamic>;
+      return decoded.cast<Map<String, dynamic>>();
+    } catch (_) {
+      return [];
+    }
+  }
 }

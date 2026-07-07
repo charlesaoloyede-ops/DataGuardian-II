@@ -6,9 +6,7 @@ import '../../../../features/alerts/domain/entities/alert_record.dart';
 import '../../../../features/alerts/domain/entities/alert_type.dart';
 import '../../../../features/alerts/domain/use_cases/check_budget_use_case.dart';
 import '../../../../features/alerts/domain/use_cases/save_alert_use_case.dart';
-import '../../../../features/app_usage/domain/i_daily_usage_repository.dart';
 import '../../../../features/app_usage/domain/i_network_stats_repository.dart';
-import '../../../../features/app_usage/domain/use_cases/sync_daily_usage_use_case.dart';
 import '../../../../services/notification/i_notification_service.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
 import '../../domain/entities/dashboard_summary.dart';
@@ -18,15 +16,41 @@ final dashboardSummaryProvider =
     FutureProvider.autoDispose<DashboardSummary>((ref) async {
   final prefs   = await getIt.getAsync<SharedPrefsService>();
   final network = getIt<INetworkStatsRepository>();
-  final daily   = getIt<IDailyUsageRepository>();
-  final sync    = getIt<SyncDailyUsageUseCase>();
-  final summary = await GetDashboardSummaryUseCase(network, daily, prefs, sync)();
+  final summary = await GetDashboardSummaryUseCase(network, prefs)();
   getIt<IAnalyticsService>().logEvent(AnalyticsEvents.dashboardViewed);
 
+  await _drainNativeAlerts(prefs);
   await _checkBudgetAlerts(summary);
 
   return summary;
 });
+
+/// Persists alerts the native background monitor fired while the app was closed
+/// into the Alerts Center (the monitor can post system notifications but can't
+/// write Hive). Notifications were already shown natively, so this only records
+/// history — it does not re-notify.
+Future<void> _drainNativeAlerts(SharedPrefsService prefs) async {
+  final pending = await prefs.drainPendingNativeAlerts();
+  if (pending.isEmpty) return;
+
+  final saveAlert = getIt<SaveAlertUseCase>();
+  for (final entry in pending) {
+    final typeName = entry['type'] as String? ?? 'threshold';
+    final type = AlertType.values.firstWhere(
+      (t) => t.name == typeName,
+      orElse: () => AlertType.threshold,
+    );
+    final triggeredAt = DateTime.fromMillisecondsSinceEpoch(
+      (entry['triggeredAtMs'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
+    );
+    await saveAlert(AlertRecord(
+      id: 'native_${type.name}_${triggeredAt.millisecondsSinceEpoch}',
+      type: type,
+      triggeredAt: triggeredAt,
+      message: entry['message'] as String? ?? 'Data alert',
+    ));
+  }
+}
 
 /// Notifies the user when a per-app data budget crosses 70/80/90/100%.
 /// Runs whenever the dashboard is viewed — per-app usage requires a live
