@@ -1,41 +1,35 @@
-import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../core/constants/app_constants.dart';
-import 'background_service_entrypoint.dart';
 import 'i_background_service_manager.dart';
 
+/// Controls the native background usage monitor.
+///
+/// Evaluation runs in native Kotlin via WorkManager (see [UsageMonitorWorker]),
+/// not a Dart isolate — the isolate has no access to the app's platform
+/// channels and is easily killed by OEM battery management. This class is a
+/// thin bridge that schedules / cancels that work and manages the
+/// battery-optimization exemption.
 @LazySingleton(as: IBackgroundServiceManager)
 class BackgroundServiceManager implements IBackgroundServiceManager {
-  final _service = FlutterBackgroundService();
-  bool _configured = false;
-
-  Future<void> _configure() async {
-    await _service.configure(
-      androidConfiguration: AndroidConfiguration(
-        onStart: onServiceStart,
-        autoStart: false,
-        isForegroundMode: true,
-        notificationChannelId: AppConstants.monitorChannelId,
-        initialNotificationTitle: 'Data Guardian',
-        initialNotificationContent: 'Monitoring your data usage…',
-        foregroundServiceNotificationId: 888,
-        foregroundServiceTypes: [AndroidForegroundType.dataSync],
-      ),
-      iosConfiguration: IosConfiguration(autoStart: false),
-    );
-    _configured = true;
-  }
+  static const _channel = MethodChannel('com.dataguardian/monitor');
 
   @override
   Future<void> startService() async {
-    if (!_configured) await _configure();
-    await _service.startService();
+    await _channel.invokeMethod<bool>('startMonitoring');
   }
 
   @override
-  Future<void> stopService() async => _service.invoke('stopService');
+  Future<void> stopService() async {
+    await _channel.invokeMethod<bool>('stopMonitoring');
+  }
 
   @override
-  Future<bool> isRunning() => _service.isRunning();
+  Future<bool> isIgnoringBatteryOptimizations() async =>
+      await _channel.invokeMethod<bool>('isIgnoringBatteryOptimizations') ?? false;
+
+  @override
+  Future<void> requestIgnoreBatteryOptimizations() async {
+    await _channel.invokeMethod<void>('requestIgnoreBatteryOptimizations');
+  }
 }

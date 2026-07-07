@@ -1,0 +1,67 @@
+package com.dataguardian.app.channels
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
+import com.dataguardian.app.MainActivity
+import com.dataguardian.app.monitor.MonitorScheduler
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
+
+private const val CHANNEL = "com.dataguardian/monitor"
+
+/**
+ * Controls the native background monitor (WorkManager) and exposes
+ * battery-optimization helpers so the Dart side can ask the user to exempt the
+ * app — the main lever for keeping background checks running on aggressive OEMs.
+ */
+class MonitorChannel(private val activity: MainActivity) {
+
+    fun register(engine: FlutterEngine) {
+        MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "startMonitoring" -> {
+                        MonitorScheduler.start(activity.applicationContext)
+                        result.success(true)
+                    }
+                    "stopMonitoring" -> {
+                        MonitorScheduler.stop(activity.applicationContext)
+                        result.success(true)
+                    }
+                    "isIgnoringBatteryOptimizations" ->
+                        result.success(isIgnoringBatteryOptimizations(activity))
+                    "requestIgnoreBatteryOptimizations" -> {
+                        requestIgnoreBatteryOptimizations(activity)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    private fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return pm.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    @Suppress("BatteryLife")
+    private fun requestIgnoreBatteryOptimizations(context: Context) {
+        // ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS shows the system dialog
+        // directly. If unavailable, fall back to the settings list.
+        try {
+            context.startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    .setData(Uri.parse("package:${context.packageName}"))
+            )
+        } catch (_: Exception) {
+            try {
+                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            } catch (_: Exception) {
+                // No battery-optimization UI on this device — nothing to do.
+            }
+        }
+    }
+}

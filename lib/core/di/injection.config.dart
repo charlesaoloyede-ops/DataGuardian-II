@@ -33,8 +33,6 @@ import '../../features/app_usage/domain/i_network_stats_repository.dart'
     as _i964;
 import '../../features/app_usage/domain/use_cases/get_app_usage_use_case.dart'
     as _i554;
-import '../../features/app_usage/domain/use_cases/sync_daily_usage_use_case.dart'
-    as _i877;
 import '../../features/dashboard/domain/use_cases/get_dashboard_summary_use_case.dart'
     as _i739;
 import '../../features/onboarding/data/onboarding_repository_impl.dart'
@@ -90,10 +88,6 @@ extension GetItInjectableX on _i174.GetIt {
             ));
     gh.lazySingleton<_i964.INetworkStatsRepository>(
         () => _i157.AppUsageRepositoryImpl(gh<_i26.IAnalyticsService>()));
-    gh.factory<_i877.SyncDailyUsageUseCase>(() => _i877.SyncDailyUsageUseCase(
-          gh<_i964.INetworkStatsRepository>(),
-          gh<_i656.IDailyUsageRepository>(),
-        ));
     gh.factory<_i380.MarkAllReadUseCase>(
         () => _i380.MarkAllReadUseCase(gh<_i646.IAlertRepository>()));
     gh.factory<_i680.SaveAlertUseCase>(
@@ -105,15 +99,13 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i964.INetworkStatsRepository>(),
               await getAsync<_i86.SharedPrefsService>(),
             ));
-    gh.factory<_i554.GetAppUsageUseCase>(
-        () => _i554.GetAppUsageUseCase(gh<_i964.INetworkStatsRepository>()));
     gh.factoryAsync<_i739.GetDashboardSummaryUseCase>(
         () async => _i739.GetDashboardSummaryUseCase(
               gh<_i964.INetworkStatsRepository>(),
-              gh<_i656.IDailyUsageRepository>(),
               await getAsync<_i86.SharedPrefsService>(),
-              gh<_i877.SyncDailyUsageUseCase>(),
             ));
+    gh.factory<_i554.GetAppUsageUseCase>(
+        () => _i554.GetAppUsageUseCase(gh<_i964.INetworkStatsRepository>()));
     return this;
   }
 }

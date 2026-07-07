@@ -11,14 +11,7 @@
     <!-- Notifications (runtime on API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Background service -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-
-    <!-- Reboot survival -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <!-- Battery optimisation exemption request -->
+    <!-- Battery optimisation exemption request (keeps the WorkManager monitor alive) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Required for NetworkStatsManager -->
@@ -51,22 +44,9 @@
             </intent-filter>
         </activity>
 
-        <!-- flutter_background_service foreground service (Phase 6) -->
-        <service
-            xmlns:tools="http://schemas.android.com/tools"
-            android:name="id.flutter.flutter_background_service.BackgroundService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false"
-            tools:replace="android:exported" />
-
-        <!-- Restart background service after device reboot (Phase 6) -->
-        <receiver
-            android:name="com.dataguardian.app.BootCompletedReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
+        <!-- Background usage monitoring runs via WorkManager (androidx.work),
+             which registers its own boot receiver and reschedules periodic work
+             across reboots — no custom service or receiver required. -->
 
         <meta-data
             android:name="flutterEmbedding"

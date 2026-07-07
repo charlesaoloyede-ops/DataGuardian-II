@@ -109,7 +109,8 @@ class _AlertConfigScreenState extends State<AlertConfigScreen> {
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             Text(
-              'Leave blank to disable. Enter values in MB.',
+              'These limits apply to mobile data only — Wi-Fi usage is never '
+              'counted. Leave a field blank to disable that alert. Values in MB.',
               style: Theme.of(context)
                   .textTheme
                   .bodySmall

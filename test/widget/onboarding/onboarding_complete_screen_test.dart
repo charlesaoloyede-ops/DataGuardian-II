@@ -23,6 +23,10 @@ void main() {
 
     when(() => mockPrefs.setOnboardingComplete(any())).thenAnswer((_) async {});
     when(() => mockBgManager.startService()).thenAnswer((_) async {});
+    when(() => mockBgManager.isIgnoringBatteryOptimizations())
+        .thenAnswer((_) async => true);
+    when(() => mockBgManager.requestIgnoreBatteryOptimizations())
+        .thenAnswer((_) async {});
 
     if (GetIt.instance.isRegistered<SharedPrefsService>()) {
       GetIt.instance.unregister<SharedPrefsService>();

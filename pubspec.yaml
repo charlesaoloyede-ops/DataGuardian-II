@@ -19,8 +19,10 @@ dependencies:
   shared_preferences: ^2.2.3
 
   # Notifications & background
+  # Background usage monitoring runs natively via Android WorkManager
+  # (see android/.../monitor/UsageMonitorWorker.kt), so no Dart background
+  # service package is needed.
   flutter_local_notifications: ^17.2.2
-  flutter_background_service: ^5.0.5
 
   # DI
   get_it: ^7.7.0
