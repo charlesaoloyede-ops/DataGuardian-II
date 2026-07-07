@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
 import com.dataguardian.app.MainActivity
+import com.dataguardian.app.monitor.MonitorNotifier
 import com.dataguardian.app.monitor.MonitorScheduler
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -25,10 +26,15 @@ class MonitorChannel(private val activity: MainActivity) {
                 when (call.method) {
                     "startMonitoring" -> {
                         MonitorScheduler.start(activity.applicationContext)
+                        // Show the persistent status entry right away; the worker
+                        // refreshes it with real totals on its next run.
+                        MonitorNotifier(activity.applicationContext)
+                            .showOngoingStatus("Monitoring your data usage…")
                         result.success(true)
                     }
                     "stopMonitoring" -> {
                         MonitorScheduler.stop(activity.applicationContext)
+                        MonitorNotifier(activity.applicationContext).cancelOngoing()
                         result.success(true)
                     }
                     "isIgnoringBatteryOptimizations" ->
