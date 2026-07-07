@@ -28,7 +28,7 @@ abstract class AppConstants {
   static const int maxDateRangeMonths = 4;
   static const int alertHistoryLimit = 100;
   static const int dashboardTopAppsCount = 5;
-  static const double defaultSpikeMultiplier = 1.75;
+  static const double defaultSpikeMultiplier = 1.5;
   static const int minBaselineDays = 3;
   static const int baselineLookbackDays = 7;
   static const int backgroundPollIntervalMinutes = 15;

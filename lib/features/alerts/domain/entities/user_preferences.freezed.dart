@@ -182,7 +182,7 @@ class _$UserPreferencesImpl implements _UserPreferences {
   const _$UserPreferencesImpl(
       {this.dailyThresholdBytes,
       this.weeklyThresholdBytes,
-      this.spikeThresholdMultiplier = 1.75,
+      this.spikeThresholdMultiplier = 1.5,
       this.backgroundThresholdBytes,
       this.billingCycleStartDay = -1,
       this.notificationsEnabled = true,

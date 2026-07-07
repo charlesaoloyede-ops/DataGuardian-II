@@ -78,6 +78,6 @@ class MonitorPrefs(context: Context) {
         if (isNull(key) || !has(key)) null else optLong(key).takeIf { it > 0 }
 
     companion object {
-        const val DEFAULT_SPIKE = 1.75
+        const val DEFAULT_SPIKE = 1.5
     }
 }
