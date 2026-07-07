@@ -1,7 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/route_names.dart';
 import '../../../../core/widgets/app_icon_widget.dart';
 import '../../../../core/extensions/int_extensions.dart';
@@ -10,11 +12,47 @@ import '../../../app_usage/domain/entities/app_usage_record.dart';
 import '../../../app_usage/domain/entities/daily_usage_summary.dart';
 import '../providers/dashboard_providers.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with WidgetsBindingObserver {
+  static const _usageChannel = MethodChannel(AppConstants.usageStatsChannel);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-check after the user returns from granting usage access in Settings.
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(dashboardSummaryProvider);
+    }
+  }
+
+  Future<void> _openUsageAccessSettings() async {
+    try {
+      await _usageChannel.invokeMethod('openUsageAccessSettings');
+    } catch (_) {
+      // No settings screen available — nothing more we can do.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
 
     return Scaffold(
@@ -34,7 +72,11 @@ class DashboardScreen extends ConsumerWidget {
       ),
       body: summaryAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorState(error: e, onRetry: () => ref.invalidate(dashboardSummaryProvider)),
+        error: (e, _) => _ErrorState(
+          error: e,
+          onRetry: () => ref.invalidate(dashboardSummaryProvider),
+          onOpenSettings: _openUsageAccessSettings,
+        ),
         data: (summary) => RefreshIndicator(
           onRefresh: () async => ref.invalidate(dashboardSummaryProvider),
           child: ListView(
@@ -395,7 +437,12 @@ class _TopAppTile extends StatelessWidget {
 class _ErrorState extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;
-  const _ErrorState({required this.error, required this.onRetry});
+  final VoidCallback onOpenSettings;
+  const _ErrorState({
+    required this.error,
+    required this.onRetry,
+    required this.onOpenSettings,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -419,9 +466,20 @@ class _ErrorState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            if (isPermission) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Data Guardian needs usage access to read your data usage. '
+                'Grant it in Settings, then return to the app.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: onRetry,
+              onPressed: isPermission ? onOpenSettings : onRetry,
               child: Text(isPermission ? 'Go to Settings' : 'Retry'),
             ),
           ],
