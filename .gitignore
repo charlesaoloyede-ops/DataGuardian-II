@@ -18,3 +18,6 @@ android/app/release/
 android/key.properties
 android/app/*.jks
 android/app/*.keystore
+
+# Kotlin compiler session artifacts
+android/.kotlin/
