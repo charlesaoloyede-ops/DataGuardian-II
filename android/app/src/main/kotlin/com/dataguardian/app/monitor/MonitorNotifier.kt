@@ -85,6 +85,9 @@ class MonitorNotifier(private val context: Context) {
         // Persistent status notification.
         const val ID_ONGOING = 1000
 
+        // User-triggered test notification.
+        const val ID_TEST = 9999
+
         // Alert notifications — stable IDs so re-fires replace rather than stack.
         const val ID_DAILY = 3001
         const val ID_WEEKLY = 3002

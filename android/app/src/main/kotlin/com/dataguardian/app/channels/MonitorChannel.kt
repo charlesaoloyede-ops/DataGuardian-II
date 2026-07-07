@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import com.dataguardian.app.MainActivity
 import com.dataguardian.app.monitor.MonitorNotifier
 import com.dataguardian.app.monitor.MonitorScheduler
@@ -43,9 +44,43 @@ class MonitorChannel(private val activity: MainActivity) {
                         requestIgnoreBatteryOptimizations(activity)
                         result.success(null)
                     }
+                    "areNotificationsEnabled" ->
+                        result.success(
+                            NotificationManagerCompat.from(activity).areNotificationsEnabled()
+                        )
+                    "openNotificationSettings" -> {
+                        openNotificationSettings(activity)
+                        result.success(null)
+                    }
+                    "sendTestNotification" -> {
+                        MonitorNotifier(activity.applicationContext).show(
+                            MonitorNotifier.ID_TEST,
+                            "Test notification",
+                            "Push notifications are working. You'll get alerts here.",
+                        )
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun openNotificationSettings(context: Context) {
+        try {
+            context.startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            )
+        } catch (_: Exception) {
+            try {
+                context.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(Uri.parse("package:${context.packageName}"))
+                )
+            } catch (_: Exception) {
+                // No settings UI available.
+            }
+        }
     }
 
     private fun isIgnoringBatteryOptimizations(context: Context): Boolean {

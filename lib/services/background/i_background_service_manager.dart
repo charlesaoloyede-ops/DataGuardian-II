@@ -12,4 +12,16 @@ abstract class IBackgroundServiceManager {
   /// Prompts the user (system dialog) to exempt the app from battery
   /// optimization.
   Future<void> requestIgnoreBatteryOptimizations();
+
+  /// Whether the OS will actually deliver notifications (permission granted and
+  /// notifications not disabled). When false, alerts are still recorded in the
+  /// Alerts Center but no system notification appears.
+  Future<bool> areNotificationsEnabled();
+
+  /// Opens the system notification settings for the app.
+  Future<void> openNotificationSettings();
+
+  /// Posts a real system notification immediately so the user can confirm
+  /// tray delivery works.
+  Future<void> sendTestNotification();
 }

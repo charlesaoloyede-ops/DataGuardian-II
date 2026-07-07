@@ -32,4 +32,18 @@ class BackgroundServiceManager implements IBackgroundServiceManager {
   Future<void> requestIgnoreBatteryOptimizations() async {
     await _channel.invokeMethod<void>('requestIgnoreBatteryOptimizations');
   }
+
+  @override
+  Future<bool> areNotificationsEnabled() async =>
+      await _channel.invokeMethod<bool>('areNotificationsEnabled') ?? true;
+
+  @override
+  Future<void> openNotificationSettings() async {
+    await _channel.invokeMethod<void>('openNotificationSettings');
+  }
+
+  @override
+  Future<void> sendTestNotification() async {
+    await _channel.invokeMethod<bool>('sendTestNotification');
+  }
 }
