@@ -262,7 +262,9 @@ class _SevenDayChart extends StatelessWidget {
       lineBarsData: [
         LineChartBarData(
           spots: spots,
-          isCurved: true,
+          // Straight segments: a curved line's bezier overshoot exaggerates
+          // peaks and can dip below zero between points, misrepresenting usage.
+          isCurved: false,
           color: AppTheme.mobileDataColor,
           barWidth: 2.5,
           dotData: const FlDotData(show: false),

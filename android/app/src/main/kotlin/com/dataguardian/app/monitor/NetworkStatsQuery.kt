@@ -10,40 +10,28 @@ import java.util.Calendar
  * Context-based NetworkStatsManager queries shared by the foreground chart
  * (via NetworkStatsChannel) and the background [UsageMonitorWorker].
  *
- * Unlike the per-app query in NetworkStatsChannel, these return device-level
- * totals which are cheaper and sufficient for threshold/spike evaluation and
- * the 7-day chart.
+ * These sum per-UID summary buckets (uid >= 0) exactly like
+ * NetworkStatsChannel's per-app query, so every number in the app — the App
+ * Usage list, the billing-cycle card, the 7-day chart, and the alert worker —
+ * comes from the same source and agrees. (Device-level `querySummaryForDevice`
+ * is deliberately avoided: it can include traffic not attributed to any app,
+ * so it disagrees with the per-app totals shown elsewhere.)
  */
 object NetworkStatsQuery {
 
     data class DayTotal(val startMs: Long, val mobileBytes: Long, val wifiBytes: Long)
 
-    /** Total mobile bytes (rx+tx) across the device for [startMs]..[endMs]. */
+    /** Total mobile bytes (rx+tx) across all apps for [startMs]..[endMs]. */
     fun mobileTotal(context: Context, startMs: Long, endMs: Long): Long =
-        deviceTotal(context, ConnectivityManager.TYPE_MOBILE, startMs, endMs)
+        sumPerUid(context, ConnectivityManager.TYPE_MOBILE, startMs, endMs, backgroundOnly = false)
 
-    /** Total Wi-Fi bytes (rx+tx) across the device for [startMs]..[endMs]. */
+    /** Total Wi-Fi bytes (rx+tx) across all apps for [startMs]..[endMs]. */
     fun wifiTotal(context: Context, startMs: Long, endMs: Long): Long =
-        deviceTotal(context, ConnectivityManager.TYPE_WIFI, startMs, endMs)
+        sumPerUid(context, ConnectivityManager.TYPE_WIFI, startMs, endMs, backgroundOnly = false)
 
-    /**
-     * Mobile bytes attributed to background state (STATE_DEFAULT) for the window.
-     * Requires per-uid iteration since device-level summaries don't split state.
-     */
-    fun mobileBackgroundTotal(context: Context, startMs: Long, endMs: Long): Long {
-        val nsm = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
-        val stats = nsm.querySummary(ConnectivityManager.TYPE_MOBILE, null, startMs, endMs)
-        val bucket = NetworkStats.Bucket()
-        var background = 0L
-        while (stats.hasNextBucket()) {
-            stats.getNextBucket(bucket)
-            if (bucket.state == NetworkStats.Bucket.STATE_DEFAULT) {
-                background += bucket.rxBytes + bucket.txBytes
-            }
-        }
-        stats.close()
-        return background
-    }
+    /** Mobile bytes attributed to background state (STATE_DEFAULT) for the window. */
+    fun mobileBackgroundTotal(context: Context, startMs: Long, endMs: Long): Long =
+        sumPerUid(context, ConnectivityManager.TYPE_MOBILE, startMs, endMs, backgroundOnly = true)
 
     /**
      * One [DayTotal] per calendar day from the day containing [startMs] through
@@ -72,10 +60,30 @@ object NetworkStatsQuery {
         return out
     }
 
-    private fun deviceTotal(context: Context, transport: Int, startMs: Long, endMs: Long): Long {
+    /**
+     * Sums rx+tx over every summary bucket for [transport] with a real app UID
+     * (uid >= 0), matching NetworkStatsChannel.accumulateTransport. When
+     * [backgroundOnly] is set, only STATE_DEFAULT (background) buckets count.
+     */
+    private fun sumPerUid(
+        context: Context,
+        transport: Int,
+        startMs: Long,
+        endMs: Long,
+        backgroundOnly: Boolean,
+    ): Long {
         val nsm = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
-        val bucket = nsm.querySummaryForDevice(transport, null, startMs, endMs)
-        return bucket.rxBytes + bucket.txBytes
+        val stats = nsm.querySummary(transport, null, startMs, endMs)
+        val bucket = NetworkStats.Bucket()
+        var total = 0L
+        while (stats.hasNextBucket()) {
+            stats.getNextBucket(bucket)
+            if (bucket.uid < 0) continue
+            if (backgroundOnly && bucket.state != NetworkStats.Bucket.STATE_DEFAULT) continue
+            total += bucket.rxBytes + bucket.txBytes
+        }
+        stats.close()
+        return total
     }
 
     private const val DAY_MS = 24L * 60 * 60 * 1000

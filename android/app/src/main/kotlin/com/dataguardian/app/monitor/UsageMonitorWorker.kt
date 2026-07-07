@@ -80,7 +80,8 @@ class UsageMonitorWorker(
                 if (baseline != null && dailyMobile > baseline * t.spikeMultiplier) {
                     val mult = dailyMobile.toDouble() / baseline
                     val msg = "Data spike detected: ${fmt(dailyMobile)} today " +
-                        "(${String.format(Locale.US, "%.1f", mult)}× your 7-day average)"
+                        "(${String.format(Locale.US, "%.1f", mult)}× your average daily use " +
+                        "of ${fmt(baseline.toLong())})"
                     notifier.show(MonitorNotifier.ID_SPIKE, "Data Spike Detected", msg)
                     prefs.markFired(SPIKE, dayKey)
                     prefs.enqueuePendingAlert("spike", msg, now)
