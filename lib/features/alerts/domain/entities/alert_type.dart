@@ -11,4 +11,6 @@ enum AlertType {
   spike,
   @HiveField(2)
   background,
+  @HiveField(3)
+  budget,
 }

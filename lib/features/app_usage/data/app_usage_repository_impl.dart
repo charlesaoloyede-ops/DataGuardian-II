@@ -4,19 +4,25 @@ import '../domain/entities/app_usage_record.dart';
 import '../domain/i_network_stats_repository.dart';
 import '../../../core/analytics/i_analytics_service.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/error/exceptions.dart';
 
 /// Bridges Dart to [NetworkStatsChannel.kt] (network bytes) and
 /// [UsageStatsChannel.kt] (foreground screen-on time).
 ///
-/// [getAppUsage] calls both channels in parallel and merges the results so
-/// each [AppUsageRecord] carries both network bytes and foreground screen time.
+/// Results are cached in memory for [_cacheTtl] to keep navigation instant.
+/// Pass [forceRefresh] = true (pull-to-refresh) to bypass the cache.
 @LazySingleton(as: INetworkStatsRepository)
 class AppUsageRepositoryImpl implements INetworkStatsRepository {
   static const _networkChannel = MethodChannel(AppConstants.networkStatsChannel);
   static const _usageChannel   = MethodChannel(AppConstants.usageStatsChannel);
 
+  static const _cacheTtl = Duration(minutes: 5);
+
+  // key = "${startMs}_${endMs}"
+  final Map<String, ({DateTime fetchedAt, List<AppUsageRecord> data})> _cache = {};
+
   final IAnalyticsService _analytics;
-  const AppUsageRepositoryImpl(this._analytics);
+  AppUsageRepositoryImpl(this._analytics);
 
   // ── INetworkStatsRepository ──────────────────────────────────────────────
 
@@ -28,15 +34,30 @@ class AppUsageRepositoryImpl implements INetworkStatsRepository {
   Future<List<AppUsageRecord>> getAppUsage({
     required DateTime start,
     required DateTime end,
+    bool forceRefresh = false,
   }) async {
+    final key = '${start.millisecondsSinceEpoch}_${end.millisecondsSinceEpoch}';
+
+    if (!forceRefresh) {
+      final hit = _cache[key];
+      if (hit != null && DateTime.now().difference(hit.fetchedAt) < _cacheTtl) {
+        return hit.data; // Fresh cache — return immediately.
+      }
+    }
+
+    final result = await _fetchFromPlatform(start, end);
+    _cache[key] = (fetchedAt: DateTime.now(), data: result);
+    return result;
+  }
+
+  Future<List<AppUsageRecord>> _fetchFromPlatform(DateTime start, DateTime end) async {
     final args = {
       'startMs': start.millisecondsSinceEpoch,
       'endMs':   end.millisecondsSinceEpoch,
     };
 
     try {
-      // Fire both channels in parallel; a foreground-time failure is non-fatal.
-      final networkFuture  = _networkChannel.invokeMethod<List<dynamic>>('getNetworkStats', args);
+      final networkFuture    = _networkChannel.invokeMethod<List<dynamic>>('getNetworkStats', args);
       final foregroundFuture = _fetchForegroundTime(args);
 
       final rawNetwork = await networkFuture;
@@ -50,11 +71,13 @@ class AppUsageRepositoryImpl implements INetworkStatsRepository {
           .toList();
     } on PlatformException catch (e) {
       if (e.code == 'USAGE_ACCESS_REQUIRED') rethrow;
-      // OEM restriction — log and surface an empty list (repo caller shows banner).
       await _analytics.logEvent(
         AnalyticsEvents.networkStatsRestricted,
-        properties: {'error': e.message ?? 'unknown'},
+        properties: {'code': e.code, 'error': e.message ?? 'unknown'},
       );
+      if (e.code == 'NETWORK_STATS_RESTRICTED') {
+        throw const NetworkStatsRestrictedException();
+      }
       return [];
     }
   }
@@ -64,8 +87,13 @@ class AppUsageRepositoryImpl implements INetworkStatsRepository {
     required DateTime start,
     required DateTime end,
   }) async {
-    final apps = await getAppUsage(start: start, end: end);
-    return apps.fold<int>(0, (sum, a) => sum + a.totalMobileBytes);
+    try {
+      final apps = await getAppUsage(start: start, end: end);
+      return apps.fold<int>(0, (sum, a) => sum + a.totalMobileBytes);
+    } on NetworkStatsRestrictedException {
+      // Return 0 so the Dashboard billing-cycle card still renders.
+      return 0;
+    }
   }
 
   // ── private helpers ──────────────────────────────────────────────────────

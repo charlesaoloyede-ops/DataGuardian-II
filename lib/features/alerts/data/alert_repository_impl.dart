@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:injectable/injectable.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../services/storage/hive_service.dart';
@@ -43,10 +44,23 @@ class AlertRepositoryImpl implements IAlertRepository {
 
   @override
   Stream<List<AlertRecord>> watchAlerts() {
-    return _hive.alertsBox.watch().map((_) {
-      final all = _hive.alertsBox.values.toList()
-        ..sort((a, b) => b.triggeredAt.compareTo(a.triggeredAt));
-      return all;
-    });
+    List<AlertRecord> sorted() => _hive.alertsBox.values.toList()
+      ..sort((a, b) => b.triggeredAt.compareTo(a.triggeredAt));
+
+    // Emit current state immediately, then re-emit on every box change.
+    late StreamController<List<AlertRecord>> controller;
+    StreamSubscription<dynamic>? sub;
+    controller = StreamController<List<AlertRecord>>(
+      onListen: () {
+        controller.add(sorted());
+        sub = _hive.alertsBox.watch().listen(
+          (_) => controller.add(sorted()),
+          onError: controller.addError,
+          onDone: controller.close,
+        );
+      },
+      onCancel: () => sub?.cancel(),
+    );
+    return controller.stream;
   }
 }

@@ -15,4 +15,5 @@ abstract class AnalyticsEvents {
   static const String networkStatsRestricted = 'network_stats_restricted';
   static const String spikeAlertFired = 'spike_alert_fired';
   static const String thresholdAlertFired = 'threshold_alert_fired';
+  static const String budgetAlertFired = 'budget_alert_fired';
 }

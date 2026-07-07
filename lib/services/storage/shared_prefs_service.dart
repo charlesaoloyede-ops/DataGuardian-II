@@ -33,4 +33,34 @@ class SharedPrefsService {
   bool get isDarkMode => _prefs.getBool(AppConstants.keyDarkMode) ?? false;
   Future<void> setDarkMode(bool value) =>
       _prefs.setBool(AppConstants.keyDarkMode, value);
+
+  /// Returns a map of packageName → budget in bytes. Empty if none set.
+  Map<String, int> getAppBudgets() {
+    final json = _prefs.getString('app_budgets');
+    if (json == null) return {};
+    final decoded = jsonDecode(json) as Map<String, dynamic>;
+    return decoded.map((k, v) => MapEntry(k, v as int));
+  }
+
+  Future<void> saveAppBudgets(Map<String, int> budgets) =>
+      _prefs.setString('app_budgets', jsonEncode(budgets));
+
+  /// Returns a map of packageName → last notified budget threshold percent
+  /// (70/80/90/100) for the current billing cycle. Empty if none notified yet.
+  Map<String, int> getBudgetAlertProgress() {
+    final json = _prefs.getString('budget_alert_progress');
+    if (json == null) return {};
+    final decoded = jsonDecode(json) as Map<String, dynamic>;
+    return decoded.map((k, v) => MapEntry(k, v as int));
+  }
+
+  Future<void> saveBudgetAlertProgress(Map<String, int> progress) =>
+      _prefs.setString('budget_alert_progress', jsonEncode(progress));
+
+  /// Billing-cycle key that [getBudgetAlertProgress] was last recorded for.
+  /// A mismatch means the cycle has rolled over and progress should reset.
+  String? get budgetAlertCycleKey => _prefs.getString('budget_alert_cycle_key');
+
+  Future<void> setBudgetAlertCycleKey(String key) =>
+      _prefs.setString('budget_alert_cycle_key', key);
 }

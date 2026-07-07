@@ -29,7 +29,8 @@
     <application
         android:label="Data Guardian"
         android:name="com.dataguardian.app.DataGuardianApplication"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:requestLegacyExternalStorage="false">
 
         <activity
@@ -52,9 +53,11 @@
 
         <!-- flutter_background_service foreground service (Phase 6) -->
         <service
+            xmlns:tools="http://schemas.android.com/tools"
             android:name="id.flutter.flutter_background_service.BackgroundService"
             android:foregroundServiceType="dataSync"
-            android:exported="false" />
+            android:exported="false"
+            tools:replace="android:exported" />
 
         <!-- Restart background service after device reboot (Phase 6) -->
         <receiver

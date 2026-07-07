@@ -6,6 +6,7 @@ abstract class INetworkStatsRepository {
   Future<List<AppUsageRecord>> getAppUsage({
     required DateTime start,
     required DateTime end,
+    bool forceRefresh = false,
   });
 
   Future<int> getTotalMobileUsage({

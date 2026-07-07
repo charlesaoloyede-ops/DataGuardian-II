@@ -19,6 +19,8 @@ class AlertTypeAdapter extends TypeAdapter<AlertType> {
         return AlertType.spike;
       case 2:
         return AlertType.background;
+      case 3:
+        return AlertType.budget;
       default:
         return AlertType.threshold;
     }
@@ -35,6 +37,9 @@ class AlertTypeAdapter extends TypeAdapter<AlertType> {
         break;
       case AlertType.background:
         writer.writeByte(2);
+        break;
+      case AlertType.budget:
+        writer.writeByte(3);
         break;
     }
   }

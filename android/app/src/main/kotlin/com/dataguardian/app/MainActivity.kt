@@ -7,16 +7,17 @@ import android.net.Uri
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
+import com.dataguardian.app.channels.NetworkStatsChannel
+import com.dataguardian.app.channels.UsageStatsChannel
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        channels.NetworkStatsChannel(this).register(flutterEngine)
-        channels.UsageStatsChannel(this).register(flutterEngine)
+        NetworkStatsChannel(this).register(flutterEngine)
+        UsageStatsChannel(this).register(flutterEngine)
     }
 
     /** Used by UsageStatsChannel to open the system settings screen. */

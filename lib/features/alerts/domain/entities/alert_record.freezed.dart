@@ -27,7 +27,7 @@ mixin _$AlertRecord {
   @HiveField(4)
   bool get isRead => throw _privateConstructorUsedError;
 
-  /// JSON-encoded metadata string to avoid Hive Map<String,dynamic> type issues.
+  /// JSON-encoded metadata string to avoid Hive `Map<String,dynamic>` type issues.
   @HiveField(5)
   String get metadataJson => throw _privateConstructorUsedError;
 
@@ -192,7 +192,7 @@ class _$AlertRecordImpl implements _AlertRecord {
   @HiveField(4)
   final bool isRead;
 
-  /// JSON-encoded metadata string to avoid Hive Map<String,dynamic> type issues.
+  /// JSON-encoded metadata string to avoid Hive `Map<String,dynamic>` type issues.
   @override
   @JsonKey()
   @HiveField(5)
@@ -255,7 +255,7 @@ abstract class _AlertRecord implements AlertRecord {
   bool get isRead;
   @override
 
-  /// JSON-encoded metadata string to avoid Hive Map<String,dynamic> type issues.
+  /// JSON-encoded metadata string to avoid Hive `Map<String,dynamic>` type issues.
   @HiveField(5)
   String get metadataJson;
   @override

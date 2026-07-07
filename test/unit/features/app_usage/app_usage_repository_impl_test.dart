@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:data_guardian/core/analytics/i_analytics_service.dart';
 import 'package:data_guardian/core/constants/app_constants.dart';
+import 'package:data_guardian/core/error/exceptions.dart';
 import 'package:data_guardian/features/app_usage/data/app_usage_repository_impl.dart';
 
 // ── mocks ────────────────────────────────────────────────────────────────────
@@ -216,16 +217,19 @@ void main() {
       );
     });
 
-    test('returns empty list on OEM restriction and logs analytics event', () async {
+    test('throws NetworkStatsRestrictedException on OEM restriction and logs event', () async {
       when(() => analytics.logEvent(any(), properties: any(named: 'properties')))
           .thenAnswer((_) async {});
 
       _mockChannel(_networkChannel, (_) async =>
           throw PlatformException(code: 'NETWORK_STATS_RESTRICTED', message: 'OEM denied'));
 
-      final records = await repository.getAppUsage(start: start, end: end);
-
-      expect(records, isEmpty);
+      expect(
+        () => repository.getAppUsage(start: start, end: end),
+        throwsA(isA<NetworkStatsRestrictedException>()),
+      );
+      // Analytics is still logged before throwing.
+      await Future<void>.delayed(Duration.zero); // let the future settle
       verify(() => analytics.logEvent(
         AnalyticsEvents.networkStatsRestricted,
         properties: any(named: 'properties'),

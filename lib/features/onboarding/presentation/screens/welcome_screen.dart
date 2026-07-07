@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/route_names.dart';
+import '../../../../core/widgets/data_guardian_logo.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -16,7 +17,7 @@ class WelcomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              Icon(Icons.data_usage_rounded, size: 72, color: scheme.primary),
+              const Center(child: DataGuardianLogo(size: 96)),
               const SizedBox(height: 24),
               Text(
                 'Data Guardian',

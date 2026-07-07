@@ -12,36 +12,40 @@ class GetAppUsageUseCase {
 
   Future<List<AppUsageRecord>> call({
     required DateRangeFilter filter,
-    NetworkView networkView = NetworkView.mobile,
+    Set<NetworkView> visibleNetworks = const {NetworkView.mobile, NetworkView.wifi},
+    bool forceRefresh = false,
   }) async {
     final records = await _repository.getAppUsage(
       start: filter.start,
       end: filter.end,
+      forceRefresh: forceRefresh,
     );
 
-    // Filter out zero-consumption apps
-    final nonZero = records.where((r) {
-      return switch (networkView) {
-        NetworkView.mobile => r.totalMobileBytes > 0,
-        NetworkView.wifi => r.totalWifiBytes > 0,
-      };
+    if (visibleNetworks.isEmpty) return [];
+
+    // Filter: keep apps with usage in at least one visible network
+    final filtered = records.where((r) {
+      if (visibleNetworks.contains(NetworkView.mobile) && r.totalMobileBytes > 0) return true;
+      if (visibleNetworks.contains(NetworkView.wifi) && r.totalWifiBytes > 0) return true;
+      return false;
     }).toList();
 
-    // Sort descending by selected metric, personal apps first
-    nonZero.sort((a, b) {
-      if (a.isSystemApp != b.isSystemApp) {
-        return a.isSystemApp ? 1 : -1; // personal first
-      }
-      final aBytes = networkView == NetworkView.mobile
-          ? a.totalMobileBytes
-          : a.totalWifiBytes;
-      final bBytes = networkView == NetworkView.mobile
-          ? b.totalMobileBytes
-          : b.totalWifiBytes;
+    // Sort personal-first, then descending by relevant bytes
+    filtered.sort((a, b) {
+      if (a.isSystemApp != b.isSystemApp) return a.isSystemApp ? 1 : -1;
+      final aBytes = _sortBytes(a, visibleNetworks);
+      final bBytes = _sortBytes(b, visibleNetworks);
       return bBytes.compareTo(aBytes);
     });
 
-    return nonZero;
+    return filtered;
+  }
+
+  int _sortBytes(AppUsageRecord r, Set<NetworkView> visible) {
+    if (visible.length == 1) {
+      return visible.contains(NetworkView.mobile) ? r.totalMobileBytes : r.totalWifiBytes;
+    }
+    return r.totalMobileBytes + r.totalWifiBytes; // both visible → sort by total
   }
 }
 

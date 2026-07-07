@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/route_names.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../services/background/i_background_service_manager.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
 
 class OnboardingCompleteScreen extends StatelessWidget {
@@ -36,6 +37,7 @@ class OnboardingCompleteScreen extends StatelessWidget {
               FilledButton(
                 onPressed: () async {
                   await getIt<SharedPrefsService>().setOnboardingComplete(true);
+                  await getIt<IBackgroundServiceManager>().startService();
                   if (context.mounted) context.goNamed(RouteNames.dashboard);
                 },
                 child: const Padding(
