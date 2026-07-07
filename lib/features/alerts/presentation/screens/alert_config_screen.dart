@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/config/build_config.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../services/background/i_background_service_manager.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
@@ -175,15 +176,16 @@ class _AlertConfigScreenState extends State<AlertConfigScreen>
               onChanged: (v) => setState(() => _notificationsEnabled = v),
               contentPadding: EdgeInsets.zero,
             ),
-            // ── Send test notification ─────────────────────────────────────
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _sendTest,
-                icon: const Icon(Icons.notifications_active_outlined, size: 18),
-                label: const Text('Send a test notification'),
+            // ── Send test notification (internal builds only) ──────────────
+            if (BuildConfig.internalTools)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _sendTest,
+                  icon: const Icon(Icons.notifications_active_outlined, size: 18),
+                  label: const Text('Send a test notification'),
+                ),
               ),
-            ),
             const Divider(),
             const SizedBox(height: 8),
 
