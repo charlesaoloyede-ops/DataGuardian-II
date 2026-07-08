@@ -80,9 +80,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingletonAsync<_i737.IOnboardingRepository>(() async =>
         _i624.OnboardingRepositoryImpl(
             await getAsync<_i86.SharedPrefsService>()));
-    gh.lazySingletonAsync<_i26.IAnalyticsService>(() async =>
-        _i616.FirebaseAnalyticsService(
-            await getAsync<_i86.SharedPrefsService>()));
+    gh.lazySingleton<_i26.IAnalyticsService>(
+        () => _i616.FirebaseAnalyticsService());
     gh.lazySingleton<_i656.IDailyUsageRepository>(
         () => _i734.DailyUsageRepositoryImpl(gh<_i13.HiveService>()));
     gh.lazySingletonAsync<_i250.SubmitFeedbackUseCase>(() async =>
@@ -98,8 +97,8 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i656.IDailyUsageRepository>(),
               await getAsync<_i86.SharedPrefsService>(),
             ));
-    gh.lazySingletonAsync<_i964.INetworkStatsRepository>(() async =>
-        _i157.AppUsageRepositoryImpl(await getAsync<_i26.IAnalyticsService>()));
+    gh.lazySingleton<_i964.INetworkStatsRepository>(
+        () => _i157.AppUsageRepositoryImpl(gh<_i26.IAnalyticsService>()));
     gh.factory<_i380.MarkAllReadUseCase>(
         () => _i380.MarkAllReadUseCase(gh<_i646.IAlertRepository>()));
     gh.factory<_i680.SaveAlertUseCase>(
@@ -108,17 +107,16 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i109.GetAlertsUseCase(gh<_i646.IAlertRepository>()));
     gh.factoryAsync<_i615.CheckThresholdUseCase>(
         () async => _i615.CheckThresholdUseCase(
-              await getAsync<_i964.INetworkStatsRepository>(),
+              gh<_i964.INetworkStatsRepository>(),
               await getAsync<_i86.SharedPrefsService>(),
             ));
     gh.factoryAsync<_i739.GetDashboardSummaryUseCase>(
         () async => _i739.GetDashboardSummaryUseCase(
-              await getAsync<_i964.INetworkStatsRepository>(),
+              gh<_i964.INetworkStatsRepository>(),
               await getAsync<_i86.SharedPrefsService>(),
             ));
-    gh.factoryAsync<_i554.GetAppUsageUseCase>(() async =>
-        _i554.GetAppUsageUseCase(
-            await getAsync<_i964.INetworkStatsRepository>()));
+    gh.factory<_i554.GetAppUsageUseCase>(
+        () => _i554.GetAppUsageUseCase(gh<_i964.INetworkStatsRepository>()));
     return this;
   }
 }

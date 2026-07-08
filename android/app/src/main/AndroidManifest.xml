@@ -54,6 +54,12 @@
              which registers its own boot receiver and reschedules periodic work
              across reboots — no custom service or receiver required. -->
 
+        <!-- Analytics off by default (opt-in). Enabled at runtime via
+             setAnalyticsCollectionEnabled(true) only when the user opts in. -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

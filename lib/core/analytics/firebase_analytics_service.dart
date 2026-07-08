@@ -1,29 +1,27 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:injectable/injectable.dart';
-import '../../services/storage/shared_prefs_service.dart';
 import 'i_analytics_service.dart';
 
-/// Firebase Analytics implementation, gated by the user's opt-in
-/// (`shareAnonymousAnalytics`, default off). No sign-in and no PII — Firebase
-/// assigns an anonymous app-instance id. See docs/backend/firestore-schema.md §5.
+/// Firebase Analytics implementation.
+///
+/// Collection is gated entirely by [setEnabled] → `setAnalyticsCollectionEnabled`,
+/// which the app drives from the user's opt-in (`shareAnonymousAnalytics`,
+/// default off). When collection is disabled, Firebase drops every event —
+/// including automatic ones — so no per-call gate is needed.
+///
+/// Kept dependency-free on purpose: depending on the async `SharedPrefsService`
+/// would make this an async get_it singleton and break the many synchronous
+/// `getIt<IAnalyticsService>()` call sites.
 @LazySingleton(as: IAnalyticsService)
 class FirebaseAnalyticsService implements IAnalyticsService {
-  final SharedPrefsService _prefs;
-  FirebaseAnalyticsService(this._prefs);
-
   FirebaseAnalytics get _analytics => FirebaseAnalytics.instance;
 
-  bool get _optedIn => _prefs.getPreferences().shareAnonymousAnalytics;
-
   @override
-  Future<void> setEnabled(bool enabled) async {
-    // Governs automatic collection too (screen views, sessions, first_open).
-    await _analytics.setAnalyticsCollectionEnabled(enabled);
-  }
+  Future<void> setEnabled(bool enabled) =>
+      _analytics.setAnalyticsCollectionEnabled(enabled);
 
   @override
   Future<void> logEvent(String name, {Map<String, dynamic>? properties}) async {
-    if (!_optedIn) return;
     await _analytics.logEvent(
       name: name,
       parameters: properties == null
