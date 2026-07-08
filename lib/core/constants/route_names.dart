@@ -11,4 +11,5 @@ abstract class RouteNames {
   static const String alertsCenter = 'alerts-center';
   static const String alertConfig = 'alert-config';
   static const String settings = 'settings';
+  static const String feedback = 'feedback';
 }

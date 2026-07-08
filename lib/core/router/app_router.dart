@@ -14,6 +14,7 @@ import '../../features/background_usage/presentation/screens/background_usage_sc
 import '../../features/alerts/presentation/screens/alerts_center_screen.dart';
 import '../../features/alerts/presentation/screens/alert_config_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/feedback/presentation/screens/feedback_screen.dart';
 
 GoRouter buildRouter({required bool onboardingComplete}) {
   return GoRouter(
@@ -84,6 +85,11 @@ GoRouter buildRouter({required bool onboardingComplete}) {
             path: '/settings',
             name: RouteNames.settings,
             builder: (_, __) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/feedback',
+            name: RouteNames.feedback,
+            builder: (_, __) => const FeedbackScreen(),
           ),
         ],
       ),

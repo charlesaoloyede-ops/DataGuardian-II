@@ -55,6 +55,7 @@ class MonitorChannel(private val activity: MainActivity) {
                     "sendTestNotification" -> {
                         MonitorNotifier(activity.applicationContext).show(
                             MonitorNotifier.ID_TEST,
+                            "test",
                             "Test notification",
                             "Push notifications are working. You'll get alerts here.",
                         )

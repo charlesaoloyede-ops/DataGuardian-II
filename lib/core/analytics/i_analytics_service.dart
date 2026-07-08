@@ -1,5 +1,11 @@
 abstract class IAnalyticsService {
   Future<void> logEvent(String name, {Map<String, dynamic>? properties});
+
+  /// Turns analytics collection on/off wholesale. Wired to the user's opt-in
+  /// (`shareAnonymousAnalytics`, default off) so that *no* data — including
+  /// automatic events like screen views and sessions — is collected until the
+  /// user opts in.
+  Future<void> setEnabled(bool enabled);
 }
 
 abstract class AnalyticsEvents {

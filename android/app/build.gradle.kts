@@ -4,6 +4,7 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 val keystorePropertiesFile = rootProject.file("key.properties")
@@ -68,4 +69,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     // Background usage monitoring (survives app kill / reboot).
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // Firebase Analytics — logged natively for background events (alerts fired,
+    // notification opens) since the WorkManager worker has no Flutter isolate.
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-analytics")
 }

@@ -41,9 +41,10 @@ class UsageMonitorWorker(
             t.dailyBytes?.let { limit ->
                 if (dailyMobile > limit && !prefs.hasFired(DAILY, dayKey)) {
                     val msg = "Daily mobile data limit reached: ${fmt(dailyMobile)} of ${fmt(limit)}"
-                    notifier.show(MonitorNotifier.ID_DAILY, "Daily Data Limit Reached", msg)
+                    notifier.show(MonitorNotifier.ID_DAILY, DAILY, "Daily Data Limit Reached", msg)
                     prefs.markFired(DAILY, dayKey)
                     prefs.enqueuePendingAlert("threshold", msg, now)
+                    MonitorAnalytics.logAlertFired(ctx, DAILY)
                 }
             }
 
@@ -54,9 +55,10 @@ class UsageMonitorWorker(
                     val weeklyMobile = NetworkStatsQuery.mobileTotal(ctx, weekStart, now)
                     if (weeklyMobile > limit) {
                         val msg = "Weekly mobile data limit reached: ${fmt(weeklyMobile)} of ${fmt(limit)}"
-                        notifier.show(MonitorNotifier.ID_WEEKLY, "Weekly Data Limit Reached", msg)
+                        notifier.show(MonitorNotifier.ID_WEEKLY, WEEKLY, "Weekly Data Limit Reached", msg)
                         prefs.markFired(WEEKLY, dayKey)
                         prefs.enqueuePendingAlert("threshold", msg, now)
+                        MonitorAnalytics.logAlertFired(ctx, WEEKLY)
                     }
                 }
             }
@@ -67,9 +69,10 @@ class UsageMonitorWorker(
                     val bg = NetworkStatsQuery.mobileBackgroundTotal(ctx, todayStart, now)
                     if (bg > limit) {
                         val msg = "Background data limit exceeded: ${fmt(bg)} of ${fmt(limit)}"
-                        notifier.show(MonitorNotifier.ID_BACKGROUND, "Background Data Alert", msg)
+                        notifier.show(MonitorNotifier.ID_BACKGROUND, BACKGROUND, "Background Data Alert", msg)
                         prefs.markFired(BACKGROUND, dayKey)
                         prefs.enqueuePendingAlert("background", msg, now)
+                        MonitorAnalytics.logAlertFired(ctx, BACKGROUND)
                     }
                 }
             }
@@ -82,9 +85,10 @@ class UsageMonitorWorker(
                     val msg = "Data spike detected: ${fmt(dailyMobile)} today " +
                         "(${String.format(Locale.US, "%.1f", mult)}× your average daily use " +
                         "of ${fmt(baseline.toLong())})"
-                    notifier.show(MonitorNotifier.ID_SPIKE, "Data Spike Detected", msg)
+                    notifier.show(MonitorNotifier.ID_SPIKE, SPIKE, "Data Spike Detected", msg)
                     prefs.markFired(SPIKE, dayKey)
                     prefs.enqueuePendingAlert("spike", msg, now)
+                    MonitorAnalytics.logAlertFired(ctx, SPIKE)
                 }
             }
 

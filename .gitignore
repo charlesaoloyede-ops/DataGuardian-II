@@ -21,3 +21,6 @@ android/app/*.keystore
 
 # Kotlin compiler session artifacts
 android/.kotlin/
+
+# Firebase config (contains project API key — keep out of public history)
+android/app/google-services.json

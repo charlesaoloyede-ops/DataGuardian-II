@@ -30,6 +30,10 @@ mixin _$UserPreferences {
   bool get notificationsEnabled => throw _privateConstructorUsedError;
   bool get isDarkMode => throw _privateConstructorUsedError;
 
+  /// Opt-in (default off) to share anonymous usage analytics. Gates all
+  /// Firebase Analytics collection. See docs/backend/firestore-schema.md §5.
+  bool get shareAnonymousAnalytics => throw _privateConstructorUsedError;
+
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
   $UserPreferencesCopyWith<UserPreferences> get copyWith =>
@@ -49,7 +53,8 @@ abstract class $UserPreferencesCopyWith<$Res> {
       int? backgroundThresholdBytes,
       int billingCycleStartDay,
       bool notificationsEnabled,
-      bool isDarkMode});
+      bool isDarkMode,
+      bool shareAnonymousAnalytics});
 }
 
 /// @nodoc
@@ -72,6 +77,7 @@ class _$UserPreferencesCopyWithImpl<$Res, $Val extends UserPreferences>
     Object? billingCycleStartDay = null,
     Object? notificationsEnabled = null,
     Object? isDarkMode = null,
+    Object? shareAnonymousAnalytics = null,
   }) {
     return _then(_value.copyWith(
       dailyThresholdBytes: freezed == dailyThresholdBytes
@@ -102,6 +108,10 @@ class _$UserPreferencesCopyWithImpl<$Res, $Val extends UserPreferences>
           ? _value.isDarkMode
           : isDarkMode // ignore: cast_nullable_to_non_nullable
               as bool,
+      shareAnonymousAnalytics: null == shareAnonymousAnalytics
+          ? _value.shareAnonymousAnalytics
+          : shareAnonymousAnalytics // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -121,7 +131,8 @@ abstract class _$$UserPreferencesImplCopyWith<$Res>
       int? backgroundThresholdBytes,
       int billingCycleStartDay,
       bool notificationsEnabled,
-      bool isDarkMode});
+      bool isDarkMode,
+      bool shareAnonymousAnalytics});
 }
 
 /// @nodoc
@@ -142,6 +153,7 @@ class __$$UserPreferencesImplCopyWithImpl<$Res>
     Object? billingCycleStartDay = null,
     Object? notificationsEnabled = null,
     Object? isDarkMode = null,
+    Object? shareAnonymousAnalytics = null,
   }) {
     return _then(_$UserPreferencesImpl(
       dailyThresholdBytes: freezed == dailyThresholdBytes
@@ -172,6 +184,10 @@ class __$$UserPreferencesImplCopyWithImpl<$Res>
           ? _value.isDarkMode
           : isDarkMode // ignore: cast_nullable_to_non_nullable
               as bool,
+      shareAnonymousAnalytics: null == shareAnonymousAnalytics
+          ? _value.shareAnonymousAnalytics
+          : shareAnonymousAnalytics // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -186,7 +202,8 @@ class _$UserPreferencesImpl implements _UserPreferences {
       this.backgroundThresholdBytes,
       this.billingCycleStartDay = -1,
       this.notificationsEnabled = true,
-      this.isDarkMode = false});
+      this.isDarkMode = false,
+      this.shareAnonymousAnalytics = false});
 
   factory _$UserPreferencesImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserPreferencesImplFromJson(json);
@@ -212,9 +229,15 @@ class _$UserPreferencesImpl implements _UserPreferences {
   @JsonKey()
   final bool isDarkMode;
 
+  /// Opt-in (default off) to share anonymous usage analytics. Gates all
+  /// Firebase Analytics collection. See docs/backend/firestore-schema.md §5.
+  @override
+  @JsonKey()
+  final bool shareAnonymousAnalytics;
+
   @override
   String toString() {
-    return 'UserPreferences(dailyThresholdBytes: $dailyThresholdBytes, weeklyThresholdBytes: $weeklyThresholdBytes, spikeThresholdMultiplier: $spikeThresholdMultiplier, backgroundThresholdBytes: $backgroundThresholdBytes, billingCycleStartDay: $billingCycleStartDay, notificationsEnabled: $notificationsEnabled, isDarkMode: $isDarkMode)';
+    return 'UserPreferences(dailyThresholdBytes: $dailyThresholdBytes, weeklyThresholdBytes: $weeklyThresholdBytes, spikeThresholdMultiplier: $spikeThresholdMultiplier, backgroundThresholdBytes: $backgroundThresholdBytes, billingCycleStartDay: $billingCycleStartDay, notificationsEnabled: $notificationsEnabled, isDarkMode: $isDarkMode, shareAnonymousAnalytics: $shareAnonymousAnalytics)';
   }
 
   @override
@@ -237,7 +260,10 @@ class _$UserPreferencesImpl implements _UserPreferences {
             (identical(other.notificationsEnabled, notificationsEnabled) ||
                 other.notificationsEnabled == notificationsEnabled) &&
             (identical(other.isDarkMode, isDarkMode) ||
-                other.isDarkMode == isDarkMode));
+                other.isDarkMode == isDarkMode) &&
+            (identical(
+                    other.shareAnonymousAnalytics, shareAnonymousAnalytics) ||
+                other.shareAnonymousAnalytics == shareAnonymousAnalytics));
   }
 
   @JsonKey(ignore: true)
@@ -250,7 +276,8 @@ class _$UserPreferencesImpl implements _UserPreferences {
       backgroundThresholdBytes,
       billingCycleStartDay,
       notificationsEnabled,
-      isDarkMode);
+      isDarkMode,
+      shareAnonymousAnalytics);
 
   @JsonKey(ignore: true)
   @override
@@ -275,7 +302,8 @@ abstract class _UserPreferences implements UserPreferences {
       final int? backgroundThresholdBytes,
       final int billingCycleStartDay,
       final bool notificationsEnabled,
-      final bool isDarkMode}) = _$UserPreferencesImpl;
+      final bool isDarkMode,
+      final bool shareAnonymousAnalytics}) = _$UserPreferencesImpl;
 
   factory _UserPreferences.fromJson(Map<String, dynamic> json) =
       _$UserPreferencesImpl.fromJson;
@@ -296,6 +324,11 @@ abstract class _UserPreferences implements UserPreferences {
   bool get notificationsEnabled;
   @override
   bool get isDarkMode;
+  @override
+
+  /// Opt-in (default off) to share anonymous usage analytics. Gates all
+  /// Firebase Analytics collection. See docs/backend/firestore-schema.md §5.
+  bool get shareAnonymousAnalytics;
   @override
   @JsonKey(ignore: true)
   _$$UserPreferencesImplCopyWith<_$UserPreferencesImpl> get copyWith =>

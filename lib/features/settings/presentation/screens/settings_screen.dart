@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/analytics/i_analytics_service.dart';
+import '../../../../core/constants/route_names.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../services/background/i_background_service_manager.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
@@ -14,6 +17,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _billingDay;
   late bool _notificationsEnabled;
   late bool _darkMode;
+  late bool _shareAnalytics;
 
   bool _saving = false;
 
@@ -24,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _billingDay           = prefs.billingCycleStartDay;
     _notificationsEnabled = prefs.notificationsEnabled;
     _darkMode             = prefs.isDarkMode;
+    _shareAnalytics       = prefs.shareAnonymousAnalytics;
   }
 
   Future<void> _save() async {
@@ -35,8 +40,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         billingCycleStartDay: _billingDay,
         notificationsEnabled: _notificationsEnabled,
         isDarkMode: _darkMode,
+        shareAnonymousAnalytics: _shareAnalytics,
       ));
       await svc.setDarkMode(_darkMode);
+      // Apply the opt-in immediately (governs all collection).
+      await getIt<IAnalyticsService>().setEnabled(_shareAnalytics);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Settings saved')),
@@ -126,6 +134,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => setState(() => _billingDay = -1),
             child: const Text('Clear — use last 30 days'),
+          ),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // ── Privacy ───────────────────────────────────────────────────────
+          Text('Privacy',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('Share anonymous usage data'),
+            subtitle: const Text(
+                'Help improve Data Guardian. Never includes your browsing or '
+                'which apps you use. Off by default.'),
+            value: _shareAnalytics,
+            onChanged: (v) => setState(() => _shareAnalytics = v),
+            contentPadding: EdgeInsets.zero,
+          ),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // ── Help & feedback ───────────────────────────────────────────────
+          Text('Help & feedback',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.feedback_outlined, color: scheme.primary),
+            title: const Text('Send feedback'),
+            subtitle: const Text('Report a bug or suggest an improvement'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.pushNamed(RouteNames.feedback),
           ),
           const Divider(),
           const SizedBox(height: 24),
