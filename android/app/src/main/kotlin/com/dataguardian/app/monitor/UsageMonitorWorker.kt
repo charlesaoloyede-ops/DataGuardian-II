@@ -88,6 +88,12 @@ class UsageMonitorWorker(
                 }
             }
 
+            // Refresh the persistent status notification with today's totals.
+            val wifiToday = NetworkStatsQuery.wifiTotal(ctx, todayStart, now)
+            notifier.showOngoingStatus(
+                "Today: ${fmt(dailyMobile)} mobile · ${fmt(wifiToday)} Wi-Fi",
+            )
+
             return Result.success()
         } catch (_: Exception) {
             // Never surface a hard failure — retry on the next periodic run.
