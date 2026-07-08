@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/route_names.dart';
+import '../../../../core/widgets/analytics_consent_sheet.dart';
 import '../../../../core/widgets/app_icon_widget.dart';
 import '../../../../core/extensions/int_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -27,6 +28,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // One-time analytics consent for users who onboarded before this update.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showAnalyticsConsentIfNeeded(context);
+    });
   }
 
   @override

@@ -35,6 +35,15 @@ class SharedPrefsService {
   Future<void> setDarkMode(bool value) =>
       _prefs.setBool(AppConstants.keyDarkMode, value);
 
+  /// Whether the one-time analytics consent prompt has been shown. Used to ask
+  /// already-onboarded users about the new opt-in analytics exactly once, after
+  /// they update — without a reinstall.
+  bool get analyticsConsentPrompted =>
+      _prefs.getBool('analytics_consent_prompted') ?? false;
+
+  Future<void> setAnalyticsConsentPrompted(bool value) =>
+      _prefs.setBool('analytics_consent_prompted', value);
+
   /// Returns a map of packageName → budget in bytes. Empty if none set.
   Map<String, int> getAppBudgets() {
     final json = _prefs.getString('app_budgets');
