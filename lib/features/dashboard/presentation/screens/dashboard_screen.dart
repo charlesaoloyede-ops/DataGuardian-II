@@ -7,6 +7,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/route_names.dart';
 import '../../../../core/widgets/analytics_consent_sheet.dart';
 import '../../../../core/widgets/app_icon_widget.dart';
+import '../../../feedback/presentation/providers/feedback_providers.dart';
 import '../../../../core/extensions/int_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../app_usage/domain/entities/app_usage_record.dart';
@@ -59,6 +60,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
+    final unreadReplies = ref.watch(unreadReplyCountProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -69,7 +71,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             onPressed: () => context.goNamed(RouteNames.alertsCenter),
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: unreadReplies > 0
+                ? const Badge(child: Icon(Icons.settings_outlined))
+                : const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
             onPressed: () => context.goNamed(RouteNames.settings),
           ),

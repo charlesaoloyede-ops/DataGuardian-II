@@ -44,6 +44,16 @@ class SharedPrefsService {
   Future<void> setAnalyticsConsentPrompted(bool value) =>
       _prefs.setBool('analytics_consent_prompted', value);
 
+  /// IDs of feedback threads whose reply the user has already seen — used to
+  /// show an unread badge only for replies they haven't opened yet.
+  Set<String> getSeenReplyIds() =>
+      _prefs.getStringList('seen_reply_ids')?.toSet() ?? <String>{};
+
+  Future<void> addSeenReplyIds(Iterable<String> ids) async {
+    final updated = getSeenReplyIds()..addAll(ids);
+    await _prefs.setStringList('seen_reply_ids', updated.toList());
+  }
+
   /// Returns a map of packageName → budget in bytes. Empty if none set.
   Map<String, int> getAppBudgets() {
     final json = _prefs.getString('app_budgets');

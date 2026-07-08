@@ -30,10 +30,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _submitting = true);
     try {
-      // Resolved async: the use case depends on the async SharedPrefsService
-      // singleton, so it is registered as a lazy async singleton.
-      final submit = await getIt.getAsync<SubmitFeedbackUseCase>();
-      await submit(
+      await getIt<SubmitFeedbackUseCase>().call(
         message: _messageCtrl.text,
         category: _category,
         email: _emailCtrl.text,

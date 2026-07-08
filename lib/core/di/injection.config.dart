@@ -68,11 +68,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i13.HiveService>(() => _i13.HiveService());
     gh.lazySingletonAsync<_i86.SharedPrefsService>(
         () => _i86.SharedPrefsService.create());
-    gh.lazySingletonAsync<_i886.IFeedbackRepository>(() async =>
-        _i1050.FirebaseFeedbackRepository(
-            await getAsync<_i86.SharedPrefsService>()));
     gh.lazySingleton<_i800.INotificationService>(
         () => _i68.NotificationServiceImpl());
+    gh.lazySingleton<_i886.IFeedbackRepository>(
+        () => _i1050.FirebaseFeedbackRepository());
     gh.lazySingleton<_i877.IBackgroundServiceManager>(
         () => _i697.BackgroundServiceManager());
     gh.factoryAsync<_i819.CheckBudgetUseCase>(() async =>
@@ -84,9 +83,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i616.FirebaseAnalyticsService());
     gh.lazySingleton<_i656.IDailyUsageRepository>(
         () => _i734.DailyUsageRepositoryImpl(gh<_i13.HiveService>()));
-    gh.lazySingletonAsync<_i250.SubmitFeedbackUseCase>(() async =>
-        _i250.SubmitFeedbackUseCase(
-            await getAsync<_i886.IFeedbackRepository>()));
+    gh.lazySingleton<_i250.SubmitFeedbackUseCase>(
+        () => _i250.SubmitFeedbackUseCase(gh<_i886.IFeedbackRepository>()));
     gh.factoryAsync<_i799.CompleteOnboardingUseCase>(() async =>
         _i799.CompleteOnboardingUseCase(
             await getAsync<_i737.IOnboardingRepository>()));

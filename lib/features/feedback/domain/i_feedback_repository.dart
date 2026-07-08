@@ -1,4 +1,5 @@
 import 'entities/feedback_category.dart';
+import 'entities/feedback_thread.dart';
 
 abstract class IFeedbackRepository {
   /// Submits user feedback. [message] is required; [email] is optional and used
@@ -9,4 +10,8 @@ abstract class IFeedbackRepository {
     required FeedbackCategory category,
     String? email,
   });
+
+  /// Streams the current user's own feedback (and any replies), newest first.
+  /// Emits an empty list when there is no signed-in identity yet.
+  Stream<List<FeedbackThread>> watchMyFeedback();
 }

@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:data_guardian/core/analytics/i_analytics_service.dart';
+import 'package:data_guardian/features/feedback/presentation/providers/feedback_providers.dart';
 import 'package:data_guardian/services/storage/shared_prefs_service.dart';
 import 'package:data_guardian/features/app_usage/domain/entities/app_usage_record.dart';
 import 'package:data_guardian/features/dashboard/domain/entities/dashboard_summary.dart';
@@ -54,7 +55,11 @@ DashboardSummary _fakeSummary({
 
 Widget _buildApp(Override override) {
   return ProviderScope(
-    overrides: [override],
+    overrides: [
+      override,
+      // Avoid touching Firebase/get_it for the feedback badge in tests.
+      unreadReplyCountProvider.overrideWith((ref) => 0),
+    ],
     child: MaterialApp.router(
       routerConfig: GoRouter(
         initialLocation: '/dashboard',

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../feedback/presentation/providers/feedback_providers.dart';
 import '../../../../core/analytics/i_analytics_service.dart';
 import '../../../../core/constants/route_names.dart';
 import '../../../../core/di/injection.dart';
@@ -171,6 +173,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('Report a bug or suggest an improvement'),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.pushNamed(RouteNames.feedback),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.forum_outlined, color: scheme.primary),
+            title: const Text('Your feedback & replies'),
+            subtitle: const Text('See replies from the team'),
+            trailing: Consumer(
+              builder: (context, ref, _) {
+                final unread = ref.watch(unreadReplyCountProvider);
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (unread > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: scheme.error,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text('$unread',
+                            style: TextStyle(
+                                color: scheme.onError,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                );
+              },
+            ),
+            onTap: () => context.pushNamed(RouteNames.myFeedback),
           ),
           const Divider(),
           const SizedBox(height: 24),
