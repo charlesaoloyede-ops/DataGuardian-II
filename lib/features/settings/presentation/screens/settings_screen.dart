@@ -6,7 +6,9 @@ import '../../../../core/analytics/i_analytics_service.dart';
 import '../../../../core/constants/route_names.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../services/background/i_background_service_manager.dart';
+import '../../../../services/security/pin_service.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
+import '../../../topup/presentation/widgets/topup_sheets.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -22,6 +24,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _shareAnalytics;
 
   bool _saving = false;
+  bool _hasPin = false;
 
   @override
   void initState() {
@@ -31,6 +34,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _notificationsEnabled = prefs.notificationsEnabled;
     _darkMode             = prefs.isDarkMode;
     _shareAnalytics       = prefs.shareAnonymousAnalytics;
+    _refreshPinStatus();
+  }
+
+  Future<void> _refreshPinStatus() async {
+    final has = await getIt<PinService>().hasPin();
+    if (mounted) setState(() => _hasPin = has);
+  }
+
+  Future<void> _managePin() async {
+    if (_hasPin) {
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.password_rounded),
+              title: const Text('Change PIN'),
+              onTap: () => Navigator.pop(ctx, 'change'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: const Text('Remove PIN'),
+              onTap: () => Navigator.pop(ctx, 'remove'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+      if (action == 'change' && mounted) {
+        await showPinSetupSheet(context);
+      } else if (action == 'remove') {
+        await getIt<PinService>().clearPin();
+      }
+    } else {
+      await showPinSetupSheet(context);
+    }
+    await _refreshPinStatus();
   }
 
   Future<void> _save() async {
@@ -155,6 +197,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: _shareAnalytics,
             onChanged: (v) => setState(() => _shareAnalytics = v),
             contentPadding: EdgeInsets.zero,
+          ),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // ── Payments ──────────────────────────────────────────────────────
+          Text('Payments',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.lock_outline_rounded, color: scheme.primary),
+            title: Text(_hasPin ? 'Transaction PIN' : 'Set a transaction PIN'),
+            subtitle: Text(_hasPin
+                ? 'Used to authorise airtime & data purchases'
+                : 'Add a 4-digit PIN to confirm purchases'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: _managePin,
           ),
           const Divider(),
           const SizedBox(height: 8),

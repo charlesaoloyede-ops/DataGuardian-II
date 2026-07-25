@@ -16,6 +16,10 @@ import '../../features/alerts/presentation/screens/alert_config_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/feedback/presentation/screens/feedback_screen.dart';
 import '../../features/feedback/presentation/screens/my_feedback_screen.dart';
+import '../../features/topup/presentation/screens/topup_hub_screen.dart';
+import '../../features/topup/presentation/screens/buy_airtime_screen.dart';
+import '../../features/topup/presentation/screens/buy_data_screen.dart';
+import '../../features/topup/presentation/screens/purchase_history_screen.dart';
 
 GoRouter buildRouter({required bool onboardingComplete}) {
   return GoRouter(
@@ -81,6 +85,28 @@ GoRouter buildRouter({required bool onboardingComplete}) {
             path: '/alerts/config',
             name: RouteNames.alertConfig,
             builder: (_, __) => const AlertConfigScreen(),
+          ),
+          GoRoute(
+            path: '/top-up',
+            name: RouteNames.topUp,
+            builder: (_, __) => const TopUpHubScreen(),
+            routes: [
+              GoRoute(
+                path: 'airtime',
+                name: RouteNames.buyAirtime,
+                builder: (_, __) => const BuyAirtimeScreen(),
+              ),
+              GoRoute(
+                path: 'data',
+                name: RouteNames.buyData,
+                builder: (_, __) => const BuyDataScreen(),
+              ),
+              GoRoute(
+                path: 'history',
+                name: RouteNames.topUpHistory,
+                builder: (_, __) => const PurchaseHistoryScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/settings',

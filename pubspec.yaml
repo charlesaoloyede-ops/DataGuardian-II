@@ -46,6 +46,14 @@ dependencies:
   cloud_firestore: ^6.6.0
   firebase_auth: ^6.5.4
 
+  # Top Up (airtime & data purchase)
+  dio: ^5.7.0                      # HTTP client for the Cloudflare Worker
+  webview_flutter: ^4.10.0         # Paystack checkout
+  share_plus: ^10.1.4              # shareable receipts
+  flutter_contacts: ^1.1.9         # optional contact picker for recipient
+  flutter_secure_storage: ^9.2.4   # transaction PIN hash
+  crypto: ^3.0.6                   # PIN hashing
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

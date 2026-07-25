@@ -45,10 +45,13 @@ import '../../features/onboarding/data/onboarding_repository_impl.dart'
 import '../../features/onboarding/domain/i_onboarding_repository.dart' as _i737;
 import '../../features/onboarding/domain/use_cases/complete_onboarding_use_case.dart'
     as _i799;
+import '../../features/topup/data/topup_repository.dart' as _i980;
+import '../../features/topup/domain/i_topup_repository.dart' as _i870;
 import '../../services/background/background_service_manager.dart' as _i697;
 import '../../services/background/i_background_service_manager.dart' as _i877;
 import '../../services/notification/i_notification_service.dart' as _i800;
 import '../../services/notification/notification_service_impl.dart' as _i68;
+import '../../services/security/pin_service.dart' as _i1007;
 import '../../services/storage/hive_service.dart' as _i13;
 import '../../services/storage/shared_prefs_service.dart' as _i86;
 import '../analytics/firebase_analytics_service.dart' as _i616;
@@ -66,8 +69,10 @@ extension GetItInjectableX on _i174.GetIt {
       environmentFilter,
     );
     gh.singleton<_i13.HiveService>(() => _i13.HiveService());
+    gh.lazySingleton<_i1007.PinService>(() => _i1007.PinService());
     gh.lazySingletonAsync<_i86.SharedPrefsService>(
         () => _i86.SharedPrefsService.create());
+    gh.lazySingleton<_i870.ITopUpRepository>(() => _i980.TopUpRepository());
     gh.lazySingleton<_i800.INotificationService>(
         () => _i68.NotificationServiceImpl());
     gh.lazySingleton<_i886.IFeedbackRepository>(

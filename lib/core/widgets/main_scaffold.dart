@@ -11,6 +11,7 @@ class MainScaffold extends StatelessWidget {
     RouteNames.appUsage,
     RouteNames.backgroundUsage,
     RouteNames.alertsCenter,
+    RouteNames.topUp,
   ];
 
   @override
@@ -45,6 +46,11 @@ class MainScaffold extends StatelessWidget {
             selectedIcon: Icon(Icons.notifications_rounded),
             label: 'Alerts',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet_rounded),
+            label: 'Top Up',
+          ),
         ],
       ),
     );
@@ -55,6 +61,7 @@ class MainScaffold extends StatelessWidget {
         RouteNames.appUsage => '/app-usage',
         RouteNames.backgroundUsage => '/background-usage',
         RouteNames.alertsCenter => '/alerts',
+        RouteNames.topUp => '/top-up',
         _ => '/dashboard',
       };
 }

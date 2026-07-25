@@ -19,6 +19,9 @@
     <!-- Battery optimisation exemption request (keeps the WorkManager monitor alive) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Optional contact picker for choosing a Top Up recipient -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
     <!-- Required for NetworkStatsManager -->
     <uses-permission android:name="android.permission.READ_NETWORK_USAGE_HISTORY"
         tools:ignore="ProtectedPermissions"

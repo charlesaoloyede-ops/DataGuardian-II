@@ -11,4 +11,13 @@ class BuildConfig {
   /// are compiled in.
   static const bool internalTools =
       bool.fromEnvironment('INTERNAL_TOOLS', defaultValue: false);
+
+  /// Base URL of the Top Up backend (Cloudflare Worker) that brokers Paystack
+  /// payments and VTpass airtime/data delivery. Defaults to the sandbox
+  /// `workers.dev` deployment; override at build time for live/custom domain:
+  ///   --dart-define=TOPUP_API_BASE_URL=https://api.dataguardian.one
+  static const String topUpApiBaseUrl = String.fromEnvironment(
+    'TOPUP_API_BASE_URL',
+    defaultValue: 'https://data-guardian-backend.dataguardian.workers.dev',
+  );
 }

@@ -13,4 +13,8 @@ abstract class RouteNames {
   static const String settings = 'settings';
   static const String feedback = 'feedback';
   static const String myFeedback = 'my-feedback';
+  static const String topUp = 'top-up';
+  static const String buyAirtime = 'buy-airtime';
+  static const String buyData = 'buy-data';
+  static const String topUpHistory = 'top-up-history';
 }

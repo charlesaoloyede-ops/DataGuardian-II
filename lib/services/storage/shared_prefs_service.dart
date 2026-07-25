@@ -4,6 +4,8 @@ import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../features/alerts/domain/entities/user_preferences.dart';
+import '../../features/topup/domain/entities/beneficiary.dart';
+import '../../features/topup/domain/topup_constants.dart';
 
 @lazySingleton
 class SharedPrefsService {
@@ -128,6 +130,56 @@ class SharedPrefsService {
     if (list.isNotEmpty) await _prefs.remove('pending_feedback');
     return list;
   }
+
+  /// Saved Top Up recipients, most-recently-used first. Includes numbers typed
+  /// manually and those picked from contacts.
+  List<Beneficiary> getBeneficiaries() {
+    final json = _prefs.getString('topup_beneficiaries');
+    if (json == null || json.isEmpty) return [];
+    try {
+      final list = (jsonDecode(json) as List<dynamic>)
+          .map((e) => Beneficiary.fromJson(e as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => b.lastUsed.compareTo(a.lastUsed));
+      return list;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Upserts a beneficiary by phone number (keeping the newest name/network),
+  /// bumps it to the top, and caps the list.
+  Future<void> saveBeneficiary(Beneficiary b) async {
+    final map = {for (final e in getBeneficiaries()) e.phone: e};
+    map[b.phone] = b; // upsert
+    final list = map.values.toList()
+      ..sort((a, z) => z.lastUsed.compareTo(a.lastUsed));
+    final capped = list.take(TopUpConstants.maxBeneficiaries).toList();
+    await _prefs.setString(
+      'topup_beneficiaries',
+      jsonEncode(capped.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  Future<void> removeBeneficiary(String phone) async {
+    final list = getBeneficiaries().where((e) => e.phone != phone).toList();
+    await _prefs.setString(
+      'topup_beneficiaries',
+      jsonEncode(list.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  /// The number to prefill a purchase with — the most recently used recipient.
+  String? get defaultRecipientPhone {
+    final list = getBeneficiaries();
+    return list.isEmpty ? null : list.first.phone;
+  }
+
+  /// Whether we've offered to set up a transaction PIN during checkout. Ensures
+  /// the one-time inline offer shows at most once.
+  bool get pinSetupOffered => _prefs.getBool('topup_pin_offered') ?? false;
+  Future<void> setPinSetupOffered(bool v) =>
+      _prefs.setBool('topup_pin_offered', v);
 
   /// Reads and clears alerts the native background monitor
   /// ([UsageMonitorWorker]) fired while the app was closed, so the foreground
