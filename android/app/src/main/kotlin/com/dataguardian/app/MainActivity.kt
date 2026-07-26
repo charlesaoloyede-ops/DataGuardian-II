@@ -16,6 +16,16 @@ import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
 
+    /** Route the app should navigate to on launch, set when opened from a
+     *  conversion-nudge notification. Consumed once by the Dart side. */
+    private var pendingRoute: String? = null
+
+    fun consumeLaunchRoute(): String? {
+        val r = pendingRoute
+        pendingRoute = null
+        return r
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         NetworkStatsChannel(this).register(flutterEngine)
@@ -40,6 +50,12 @@ class MainActivity : FlutterActivity() {
         if (intent?.getBooleanExtra(MonitorNotifier.EXTRA_FROM_NOTIFICATION, false) != true) return
         val type = intent.getStringExtra(MonitorNotifier.EXTRA_NOTIFICATION_TYPE) ?: "unknown"
         MonitorAnalytics.logNotificationOpened(this, type)
+        // Deep-link conversion nudges straight to where the user can act.
+        pendingRoute = when (type) {
+            "nudge_budget" -> "/app-usage"
+            "nudge_limits" -> "/alerts"
+            else -> pendingRoute
+        }
         // Clear so an activity recreate (e.g. rotation) doesn't double-count.
         intent.removeExtra(MonitorNotifier.EXTRA_FROM_NOTIFICATION)
         intent.removeExtra(MonitorNotifier.EXTRA_NOTIFICATION_TYPE)

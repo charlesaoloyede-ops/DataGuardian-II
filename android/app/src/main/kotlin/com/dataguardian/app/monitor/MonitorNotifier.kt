@@ -112,5 +112,9 @@ class MonitorNotifier(private val context: Context) {
         const val ID_WEEKLY = 3002
         const val ID_BACKGROUND = 3003
         const val ID_SPIKE = 3004
+
+        // Conversion nudges (set a budget / set limits).
+        const val ID_NUDGE_BUDGET = 3005
+        const val ID_NUDGE_LIMITS = 3006
     }
 }

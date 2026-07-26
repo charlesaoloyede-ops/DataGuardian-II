@@ -52,6 +52,26 @@ class MonitorPrefs(context: Context) {
         prefs.edit().putBoolean("flutter.monitor_fired_${type}_$dayKey", true).apply()
     }
 
+    // ── conversion nudges (budget / limits not yet set) ──────────────────────
+
+    /** True if the user has set a data budget for at least one app. */
+    fun hasAnyAppBudget(): Boolean {
+        val raw = prefs.getString("flutter.app_budgets", null) ?: return false
+        return try {
+            JSONObject(raw).length() > 0
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Last time (epoch ms) a given nudge was shown; 0 if never. Native-only
+     *  keys (no `flutter.` prefix) so Dart's prefs never surface them. */
+    fun nudgeLastMs(kind: String): Long = prefs.getLong("nudge_last_$kind", 0L)
+
+    fun setNudgeLast(kind: String, ms: Long) {
+        prefs.edit().putLong("nudge_last_$kind", ms).apply()
+    }
+
     // ── pending-alert hand-off to the Dart Alerts Center ─────────────────────
 
     /**

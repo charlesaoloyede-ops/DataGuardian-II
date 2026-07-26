@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../constants/route_names.dart';
@@ -21,11 +22,22 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     RouteNames.topUp,
   ];
 
+  static const _monitorChannel = MethodChannel('com.dataguardian/monitor');
+
   @override
   void initState() {
     super.initState();
-    // One launch-time check for a sideloaded update.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      // If opened from a conversion-nudge notification, jump to that page first.
+      try {
+        final route =
+            await _monitorChannel.invokeMethod<String>('consumeLaunchRoute');
+        if (route != null && route.isNotEmpty && mounted) context.go(route);
+      } catch (_) {
+        // No native channel / nothing pending — ignore.
+      }
+      // One launch-time check for a sideloaded update.
       if (mounted) maybePromptUpdate(context);
     });
   }

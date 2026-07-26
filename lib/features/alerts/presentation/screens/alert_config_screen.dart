@@ -177,7 +177,7 @@ class _AlertConfigScreenState extends State<AlertConfigScreen>
               contentPadding: EdgeInsets.zero,
             ),
             // ── Send test notification (internal builds only) ──────────────
-            if (BuildConfig.internalTools)
+            if (BuildConfig.internalTools) ...[
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
@@ -186,6 +186,15 @@ class _AlertConfigScreenState extends State<AlertConfigScreen>
                   label: const Text('Send a test notification'),
                 ),
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _manager.sendTestNudge(),
+                  icon: const Icon(Icons.savings_outlined, size: 18),
+                  label: const Text('Send a test budget nudge'),
+                ),
+              ),
+            ],
             const Divider(),
             const SizedBox(height: 8),
 

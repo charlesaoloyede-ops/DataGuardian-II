@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/analytics/i_analytics_service.dart';
 import '../../../../core/constants/route_names.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/widgets/budget_nudge_banner.dart';
+import '../../../../services/storage/shared_prefs_service.dart';
 import '../../domain/entities/alert_record.dart';
 import '../../domain/entities/alert_type.dart';
 import '../../domain/use_cases/mark_all_read_use_case.dart';
@@ -38,16 +40,29 @@ class AlertsCenterScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: alertsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
-        data: (alerts) => alerts.isEmpty
-            ? const _EmptyState()
-            : ListView.separated(
-                itemCount: alerts.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (_, i) => _AlertTile(alert: alerts[i]),
-              ),
+      body: Column(
+        children: [
+          if (getIt<SharedPrefsService>().getAppBudgets().isEmpty)
+            BudgetNudgeBanner(
+              message:
+                  'Open App Usage and tap any app to set a data budget for it.',
+              actionLabel: 'Open App Usage',
+              onAction: () => context.goNamed(RouteNames.appUsage),
+            ),
+          Expanded(
+            child: alertsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text(e.toString())),
+              data: (alerts) => alerts.isEmpty
+                  ? const _EmptyState()
+                  : ListView.separated(
+                      itemCount: alerts.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) => _AlertTile(alert: alerts[i]),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }

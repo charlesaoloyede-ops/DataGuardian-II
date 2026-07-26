@@ -92,6 +92,9 @@ class UsageMonitorWorker(
                 }
             }
 
+            // ── Conversion nudges: budget / limits not yet set ──────────────
+            maybeSendNudges(prefs, notifier, now, t)
+
             // Refresh the persistent status notification with today's totals.
             val wifiToday = NetworkStatsQuery.wifiTotal(ctx, todayStart, now)
             notifier.showOngoingStatus(
@@ -126,6 +129,53 @@ class UsageMonitorWorker(
         return sum.toDouble() / daysWithUsage
     }
 
+    /**
+     * Fires the conversion nudges — one prompting the user to set a per-app data
+     * budget, one to set daily/weekly/background limits — at most once every
+     * [NUDGE_INTERVAL_MS], and only while the user hasn't converted. The first
+     * encounter just seeds the timer, so a fresh install isn't nudged until the
+     * interval has elapsed. Gated on notifications being enabled (checked by the
+     * caller).
+     */
+    private fun maybeSendNudges(
+        prefs: MonitorPrefs,
+        notifier: MonitorNotifier,
+        now: Long,
+        t: MonitorPrefs.Thresholds,
+    ) {
+        if (!prefs.hasAnyAppBudget() && dueForNudge(prefs, NUDGE_BUDGET, now)) {
+            notifier.show(
+                MonitorNotifier.ID_NUDGE_BUDGET,
+                NUDGE_BUDGET,
+                "Set an app data budget",
+                "Tap any app in Data Guardian to set a data budget and get alerted before it overspends.",
+            )
+            prefs.setNudgeLast(NUDGE_BUDGET, now)
+        }
+
+        val hasLimit = t.dailyBytes != null || t.weeklyBytes != null || t.backgroundBytes != null
+        if (!hasLimit && dueForNudge(prefs, NUDGE_LIMITS, now)) {
+            notifier.show(
+                MonitorNotifier.ID_NUDGE_LIMITS,
+                NUDGE_LIMITS,
+                "Set your data limits",
+                "Set daily, weekly, or background data limits so Data Guardian can warn you before you go over.",
+            )
+            prefs.setNudgeLast(NUDGE_LIMITS, now)
+        }
+    }
+
+    /** Due when the interval has elapsed. First call seeds the timer (no nudge),
+     *  so a brand-new user gets a grace period rather than an instant prompt. */
+    private fun dueForNudge(prefs: MonitorPrefs, kind: String, now: Long): Boolean {
+        val last = prefs.nudgeLastMs(kind)
+        if (last == 0L) {
+            prefs.setNudgeLast(kind, now)
+            return false
+        }
+        return now - last >= NUDGE_INTERVAL_MS
+    }
+
     private fun startOfToday(): Long = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)
         set(Calendar.MINUTE, 0)
@@ -144,8 +194,11 @@ class UsageMonitorWorker(
         private const val WEEKLY = "weekly"
         private const val BACKGROUND = "background"
         private const val SPIKE = "spike"
+        private const val NUDGE_BUDGET = "nudge_budget"
+        private const val NUDGE_LIMITS = "nudge_limits"
         private const val MIN_BASELINE_DAYS = 3
         private const val DAY_MS = 24L * 60 * 60 * 1000
+        private const val NUDGE_INTERVAL_MS = 3L * 24 * 60 * 60 * 1000 // every 3 days
         private val DAY_FMT = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     }
 }

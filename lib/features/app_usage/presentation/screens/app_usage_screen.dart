@@ -7,6 +7,7 @@ import '../../../../core/extensions/int_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_range_utils.dart';
 import '../../../../core/widgets/app_icon_widget.dart';
+import '../../../../core/widgets/budget_nudge_banner.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
 import '../../domain/entities/app_usage_record.dart';
 import '../../domain/use_cases/get_app_usage_use_case.dart';
@@ -256,7 +257,13 @@ class _AppList extends ConsumerWidget {
           showMobile: showMobile,
           showWifi: showWifi,
         ),
-        const _BudgetHint(),
+        if (budgets.isEmpty)
+          const BudgetNudgeBanner(
+            message:
+                'Tap any app below to set a data budget — Data Guardian will alert you before it overspends.',
+          )
+        else
+          const _BudgetHint(),
         if (personal.isNotEmpty) ...[
           _SectionHeader(title: 'Personal Apps', count: personal.length),
           ...personal.map((a) => _AppTile(
