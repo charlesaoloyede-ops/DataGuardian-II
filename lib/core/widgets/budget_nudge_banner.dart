@@ -1,28 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Session-scoped dismissal for the budget nudge callout. Resets on cold start,
-/// so the nudge returns until the user actually sets a budget (converts).
-final budgetNudgeDismissedProvider = StateProvider<bool>((_) => false);
+/// Session-scoped dismissal per nudge id. Resets on cold start, so a nudge
+/// returns until the user actually converts (sets a budget / a limit).
+final nudgeDismissedProvider = StateProvider.family<bool, String>((_, __) => false);
 
-/// A clean, dismissible callout prompting the user to set a per-app data budget.
-/// Presentation-only — the caller decides whether the user has converted and
-/// only renders this when they haven't. Hides itself once dismissed this session.
-class BudgetNudgeBanner extends ConsumerWidget {
+/// A clean, dismissible callout prompting the user toward a conversion action
+/// (set an app budget, set data limits, …). Presentation-only — the caller
+/// decides whether the user has converted and only renders this when they
+/// haven't. Hides itself once dismissed this session.
+class NudgeBanner extends ConsumerWidget {
+  /// Distinct id so each nudge dismisses independently.
+  final String id;
+  final String title;
   final String message;
+  final IconData icon;
   final String? actionLabel;
   final VoidCallback? onAction;
 
-  const BudgetNudgeBanner({
+  const NudgeBanner({
     super.key,
+    required this.id,
+    required this.title,
     required this.message,
+    this.icon = Icons.savings_rounded,
     this.actionLabel,
     this.onAction,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(budgetNudgeDismissedProvider)) return const SizedBox.shrink();
+    if (ref.watch(nudgeDismissedProvider(id))) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -38,14 +46,14 @@ class BudgetNudgeBanner extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.savings_rounded, color: scheme.onPrimaryContainer, size: 20),
+              Icon(icon, color: scheme.onPrimaryContainer, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Set a data budget',
+                      title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             color: scheme.onPrimaryContainer,
                             fontWeight: FontWeight.w700,
@@ -66,7 +74,7 @@ class BudgetNudgeBanner extends ConsumerWidget {
                 visualDensity: VisualDensity.compact,
                 tooltip: 'Dismiss',
                 onPressed: () =>
-                    ref.read(budgetNudgeDismissedProvider.notifier).state = true,
+                    ref.read(nudgeDismissedProvider(id).notifier).state = true,
               ),
             ],
           ),

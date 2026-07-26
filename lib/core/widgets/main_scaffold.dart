@@ -13,7 +13,8 @@ class MainScaffold extends ConsumerStatefulWidget {
   ConsumerState<MainScaffold> createState() => _MainScaffoldState();
 }
 
-class _MainScaffoldState extends ConsumerState<MainScaffold> {
+class _MainScaffoldState extends ConsumerState<MainScaffold>
+    with WidgetsBindingObserver {
   static const _tabs = [
     RouteNames.dashboard,
     RouteNames.appUsage,
@@ -27,19 +28,37 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      // If opened from a conversion-nudge notification, jump to that page first.
-      try {
-        final route =
-            await _monitorChannel.invokeMethod<String>('consumeLaunchRoute');
-        if (route != null && route.isNotEmpty && mounted) context.go(route);
-      } catch (_) {
-        // No native channel / nothing pending — ignore.
-      }
+      // If opened cold from a conversion-nudge notification, jump to that page.
+      await _consumeLaunchRoute();
       // One launch-time check for a sideloaded update.
       if (mounted) maybePromptUpdate(context);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // A notification tap while the app is already alive delivers via
+    // onNewIntent (not initState), so re-check the pending route on resume.
+    if (state == AppLifecycleState.resumed) _consumeLaunchRoute();
+  }
+
+  Future<void> _consumeLaunchRoute() async {
+    try {
+      final route =
+          await _monitorChannel.invokeMethod<String>('consumeLaunchRoute');
+      if (route != null && route.isNotEmpty && mounted) context.go(route);
+    } catch (_) {
+      // No native channel / nothing pending — ignore.
+    }
   }
 
   @override

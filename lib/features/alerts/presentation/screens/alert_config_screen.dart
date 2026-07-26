@@ -194,6 +194,14 @@ class _AlertConfigScreenState extends State<AlertConfigScreen>
                   label: const Text('Send a test budget nudge'),
                 ),
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _manager.sendTestLimitsNudge(),
+                  icon: const Icon(Icons.speed_outlined, size: 18),
+                  label: const Text('Send a test limits nudge'),
+                ),
+              ),
             ],
             const Divider(),
             const SizedBox(height: 8),

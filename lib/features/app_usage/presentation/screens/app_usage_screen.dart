@@ -258,7 +258,9 @@ class _AppList extends ConsumerWidget {
           showWifi: showWifi,
         ),
         if (budgets.isEmpty)
-          const BudgetNudgeBanner(
+          const NudgeBanner(
+            id: 'budget',
+            title: 'Set a data budget',
             message:
                 'Tap any app below to set a data budget — Data Guardian will alert you before it overspends.',
           )

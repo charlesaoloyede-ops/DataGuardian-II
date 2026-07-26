@@ -62,6 +62,15 @@ class MonitorChannel(private val activity: MainActivity) {
                         )
                         result.success(true)
                     }
+                    "sendTestLimitsNudge" -> {
+                        MonitorNotifier(activity.applicationContext).show(
+                            MonitorNotifier.ID_NUDGE_LIMITS,
+                            "nudge_limits",
+                            "Set your data limits",
+                            "Tap here to set daily, weekly, and background data limits and get alerted before you go over.",
+                        )
+                        result.success(true)
+                    }
                     "sendTestNotification" -> {
                         MonitorNotifier(activity.applicationContext).show(
                             MonitorNotifier.ID_TEST,

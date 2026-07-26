@@ -53,7 +53,7 @@ class MainActivity : FlutterActivity() {
         // Deep-link conversion nudges straight to where the user can act.
         pendingRoute = when (type) {
             "nudge_budget" -> "/app-usage"
-            "nudge_limits" -> "/alerts"
+            "nudge_limits" -> "/alerts/config"
             else -> pendingRoute
         }
         // Clear so an activity recreate (e.g. rotation) doesn't double-count.

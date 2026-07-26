@@ -14,6 +14,15 @@ import '../providers/alert_providers.dart';
 class AlertsCenterScreen extends ConsumerWidget {
   const AlertsCenterScreen({super.key});
 
+  /// True when the user hasn't set any general data limit yet (daily, weekly,
+  /// or background) — drives the "Set General Data Limit" conversion callout.
+  bool _noLimitsSet() {
+    final p = getIt<SharedPrefsService>().getPreferences();
+    return p.dailyThresholdBytes == null &&
+        p.weeklyThresholdBytes == null &&
+        p.backgroundThresholdBytes == null;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final alertsAsync = ref.watch(alertsStreamProvider);
@@ -42,12 +51,17 @@ class AlertsCenterScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          if (getIt<SharedPrefsService>().getAppBudgets().isEmpty)
-            BudgetNudgeBanner(
+          if (_noLimitsSet())
+            NudgeBanner(
+              id: 'limits',
+              icon: Icons.speed_rounded,
+              title: 'Set General Data Limit',
               message:
-                  'Open App Usage and tap any app to set a data budget for it.',
-              actionLabel: 'Open App Usage',
-              onAction: () => context.goNamed(RouteNames.appUsage),
+                  'Set daily, weekly, and background data limits. Get notified '
+                  'when you\'re close to a limit or when usage spikes above your '
+                  'normal average.',
+              actionLabel: 'Set Data Limit',
+              onAction: () => context.goNamed(RouteNames.alertConfig),
             ),
           Expanded(
             child: alertsAsync.when(
