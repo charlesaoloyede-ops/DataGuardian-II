@@ -25,6 +25,8 @@ import '../../features/alerts/domain/use_cases/mark_all_read_use_case.dart'
     as _i380;
 import '../../features/alerts/domain/use_cases/save_alert_use_case.dart'
     as _i680;
+import '../../features/app_update/data/update_repository.dart' as _i970;
+import '../../features/app_update/domain/i_update_repository.dart' as _i166;
 import '../../features/app_usage/data/app_usage_repository_impl.dart' as _i157;
 import '../../features/app_usage/data/daily_usage_repository_impl.dart'
     as _i734;
@@ -86,6 +88,7 @@ extension GetItInjectableX on _i174.GetIt {
             await getAsync<_i86.SharedPrefsService>()));
     gh.lazySingleton<_i26.IAnalyticsService>(
         () => _i616.FirebaseAnalyticsService());
+    gh.lazySingleton<_i166.IUpdateRepository>(() => _i970.UpdateRepository());
     gh.lazySingleton<_i656.IDailyUsageRepository>(
         () => _i734.DailyUsageRepositoryImpl(gh<_i13.HiveService>()));
     gh.lazySingleton<_i250.SubmitFeedbackUseCase>(

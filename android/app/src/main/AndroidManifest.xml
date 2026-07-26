@@ -22,6 +22,9 @@
     <!-- Optional contact picker for choosing a Top Up recipient -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+    <!-- In-app update: install a downloaded APK (sideloaded distribution) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Required for NetworkStatsManager -->
     <uses-permission android:name="android.permission.READ_NETWORK_USAGE_HISTORY"
         tools:ignore="ProtectedPermissions"
@@ -66,5 +69,17 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- FileProvider for handing the downloaded update APK to the system
+             installer (content:// URI required on modern Android). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

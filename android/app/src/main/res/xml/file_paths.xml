@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- App-specific external files dir (getExternalFilesDir) — where the update
+         APK is downloaded and shared with the system installer. -->
+    <external-files-path name="updates" path="." />
+</paths>

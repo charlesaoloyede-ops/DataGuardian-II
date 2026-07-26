@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import com.dataguardian.app.channels.AppUpdateChannel
 import com.dataguardian.app.channels.MonitorChannel
 import com.dataguardian.app.channels.NetworkStatsChannel
 import com.dataguardian.app.channels.UsageStatsChannel
@@ -20,6 +21,7 @@ class MainActivity : FlutterActivity() {
         NetworkStatsChannel(this).register(flutterEngine)
         UsageStatsChannel(this).register(flutterEngine)
         MonitorChannel(this).register(flutterEngine)
+        AppUpdateChannel(this).register(flutterEngine)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

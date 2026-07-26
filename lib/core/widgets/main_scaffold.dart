@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../constants/route_names.dart';
+import '../../features/app_update/presentation/update_flow.dart';
 
-class MainScaffold extends StatelessWidget {
+class MainScaffold extends ConsumerStatefulWidget {
   final Widget child;
   const MainScaffold({super.key, required this.child});
 
+  @override
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends ConsumerState<MainScaffold> {
   static const _tabs = [
     RouteNames.dashboard,
     RouteNames.appUsage,
@@ -15,13 +22,22 @@ class MainScaffold extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // One launch-time check for a sideloaded update.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybePromptUpdate(context);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     int index = _tabs.indexWhere((r) => location.startsWith(_pathFor(r)));
     if (index < 0) index = 0;
 
     return Scaffold(
-      body: child,
+      body: widget.child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) => context.goNamed(_tabs[i]),

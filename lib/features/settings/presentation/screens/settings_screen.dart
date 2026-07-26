@@ -8,6 +8,7 @@ import '../../../../core/di/injection.dart';
 import '../../../../services/background/i_background_service_manager.dart';
 import '../../../../services/security/pin_service.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
+import '../../../app_update/presentation/update_flow.dart';
 import '../../../topup/presentation/widgets/topup_sheets.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -267,6 +268,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             onTap: () => context.pushNamed(RouteNames.myFeedback),
+          ),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // ── About ─────────────────────────────────────────────────────────
+          Text('About',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.system_update_rounded, color: scheme.primary),
+            title: const Text('Check for updates'),
+            subtitle: const Text('Download and install the latest version'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => checkForUpdatesInteractive(context),
           ),
           const Divider(),
           const SizedBox(height: 24),
