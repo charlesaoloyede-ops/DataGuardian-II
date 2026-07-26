@@ -43,9 +43,9 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         onDestinationSelected: (i) => context.goNamed(_tabs[i]),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
-            label: 'Dashboard',
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
