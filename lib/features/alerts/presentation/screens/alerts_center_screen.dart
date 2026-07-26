@@ -14,12 +14,13 @@ import '../providers/alert_providers.dart';
 class AlertsCenterScreen extends ConsumerWidget {
   const AlertsCenterScreen({super.key});
 
-  /// True when the user hasn't set any general data limit yet (daily, weekly,
-  /// or background) — drives the "Set General Data Limit" conversion callout.
-  bool _noLimitsSet() {
+  /// True until the user has set all three general data limits (daily, weekly,
+  /// and background) — drives the "Set General Data Limit" conversion callout,
+  /// which keeps showing until every limit is configured.
+  bool _limitsIncomplete() {
     final p = getIt<SharedPrefsService>().getPreferences();
-    return p.dailyThresholdBytes == null &&
-        p.weeklyThresholdBytes == null &&
+    return p.dailyThresholdBytes == null ||
+        p.weeklyThresholdBytes == null ||
         p.backgroundThresholdBytes == null;
   }
 
@@ -51,7 +52,7 @@ class AlertsCenterScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          if (_noLimitsSet())
+          if (_limitsIncomplete())
             NudgeBanner(
               id: 'limits',
               icon: Icons.speed_rounded,

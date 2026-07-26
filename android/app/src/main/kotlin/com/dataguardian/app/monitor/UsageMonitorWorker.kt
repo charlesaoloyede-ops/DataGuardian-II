@@ -153,13 +153,15 @@ class UsageMonitorWorker(
             prefs.setNudgeLast(NUDGE_BUDGET, now)
         }
 
-        val hasLimit = t.dailyBytes != null || t.weeklyBytes != null || t.backgroundBytes != null
-        if (!hasLimit && dueForNudge(prefs, NUDGE_LIMITS, now)) {
+        // Nudge until all three limits are configured (daily, weekly, background).
+        val allLimitsSet =
+            t.dailyBytes != null && t.weeklyBytes != null && t.backgroundBytes != null
+        if (!allLimitsSet && dueForNudge(prefs, NUDGE_LIMITS, now)) {
             notifier.show(
                 MonitorNotifier.ID_NUDGE_LIMITS,
                 NUDGE_LIMITS,
                 "Set your data limits",
-                "Set daily, weekly, or background data limits so Data Guardian can warn you before you go over.",
+                "Set daily, weekly, and background data limits so Data Guardian can warn you before you go over.",
             )
             prefs.setNudgeLast(NUDGE_LIMITS, now)
         }
