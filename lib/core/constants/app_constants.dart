@@ -1,7 +1,7 @@
 abstract class AppConstants {
   // App identity
   // Keep in sync with pubspec `version:` until package_info_plus is added.
-  static const String appVersion = '1.5.0+6';
+  static const String appVersion = '1.6.0+7';
 
   // Hive box names
   static const String appUsageBox = 'app_usage_records';
