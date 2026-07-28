@@ -1,11 +1,15 @@
 package com.dataguardian.app.monitor
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.pm.Signature
+import android.os.Build
 import androidx.core.content.pm.PackageInfoCompat
 import com.dataguardian.app.R
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 
 /**
  * Background check for a published sideload update, so users running a stale
@@ -36,6 +40,11 @@ object UpdateCheck {
             connectTimeout = 8000
             readTimeout = 8000
             requestMethod = "GET"
+            // Identify the calling app the same way the Firebase SDK does, so
+            // the API key can be locked to this package + signing cert in Google
+            // Cloud (Android application restriction) without 403-ing this call.
+            setRequestProperty("X-Android-Package", context.packageName)
+            signingCertSha1(context)?.let { setRequestProperty("X-Android-Cert", it) }
         }
         try {
             if (conn.responseCode != 200) null
@@ -66,5 +75,31 @@ object UpdateCheck {
         PackageInfoCompat.getLongVersionCode(pi)
     } catch (_: Exception) {
         Long.MAX_VALUE // unknown installed version → never notify
+    }
+
+    /**
+     * SHA-1 fingerprint of the running build's signing certificate, as uppercase
+     * hex with no separators — the exact form the `X-Android-Cert` header wants.
+     * Computed at runtime, so it matches whatever cert signed this APK (release
+     * or debug). Register the release cert's SHA-1 in the API key's Android
+     * restriction. Null if it can't be read (then the header is omitted).
+     */
+    private fun signingCertSha1(context: Context): String? = try {
+        val pm = context.packageManager
+        @Suppress("DEPRECATION")
+        val signatures: Array<Signature>? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                    .signingInfo?.apkContentsSigners
+            } else {
+                pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures
+            }
+        signatures?.firstOrNull()?.let { sig ->
+            MessageDigest.getInstance("SHA-1")
+                .digest(sig.toByteArray())
+                .joinToString("") { "%02X".format(it) }
+        }
+    } catch (_: Exception) {
+        null
     }
 }
