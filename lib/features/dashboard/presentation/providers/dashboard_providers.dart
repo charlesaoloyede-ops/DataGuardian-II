@@ -34,21 +34,38 @@ Future<void> _drainNativeAlerts(SharedPrefsService prefs) async {
   if (pending.isEmpty) return;
 
   final saveAlert = getIt<SaveAlertUseCase>();
-  for (final entry in pending) {
+  for (var i = 0; i < pending.length; i++) {
+    final entry = pending[i];
     final typeName = entry['type'] as String? ?? 'threshold';
-    final type = AlertType.values.firstWhere(
-      (t) => t.name == typeName,
-      orElse: () => AlertType.threshold,
-    );
+    final type = _alertTypeFromNative(typeName);
     final triggeredAt = DateTime.fromMillisecondsSinceEpoch(
       (entry['triggeredAtMs'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
     );
     await saveAlert(AlertRecord(
-      id: 'native_${type.name}_${triggeredAt.millisecondsSinceEpoch}',
+      // Include the raw native type and the loop index so multiple alerts from
+      // one worker run (which all share the same triggeredAt) get distinct ids.
+      id: 'native_${typeName}_${triggeredAt.millisecondsSinceEpoch}_$i',
       type: type,
       triggeredAt: triggeredAt,
       message: entry['message'] as String? ?? 'Data alert',
     ));
+  }
+}
+
+/// Maps the native worker's alert type strings to [AlertType]. Both bundle
+/// alerts share the [AlertType.bundle] category; the message text distinguishes
+/// the exhaustion warning from the top-up nudge.
+AlertType _alertTypeFromNative(String typeName) {
+  switch (typeName) {
+    case 'spike':
+      return AlertType.spike;
+    case 'background':
+      return AlertType.background;
+    case 'bundle_risk':
+    case 'bundle_topup':
+      return AlertType.bundle;
+    default:
+      return AlertType.threshold;
   }
 }
 

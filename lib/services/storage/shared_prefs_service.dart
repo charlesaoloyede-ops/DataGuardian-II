@@ -6,6 +6,7 @@ import '../../core/constants/app_constants.dart';
 import '../../features/alerts/domain/entities/user_preferences.dart';
 import '../../features/topup/domain/entities/beneficiary.dart';
 import '../../features/topup/domain/topup_constants.dart';
+import '../../features/bundle/domain/entities/data_bundle.dart';
 
 @lazySingleton
 class SharedPrefsService {
@@ -180,6 +181,38 @@ class SharedPrefsService {
   bool get pinSetupOffered => _prefs.getBool('topup_pin_offered') ?? false;
   Future<void> setPinSetupOffered(bool v) =>
       _prefs.setBool('topup_pin_offered', v);
+
+  /// The single monitored data bundle, or null if none is set up. Stored under
+  /// `data_bundle` (the plugin prefixes it `flutter.data_bundle`), the exact key
+  /// the native background monitor reads to fire the exhaustion/top-up alerts.
+  DataBundle? getDataBundle() {
+    final json = _prefs.getString('data_bundle');
+    if (json == null || json.isEmpty) return null;
+    try {
+      return DataBundle.fromJson(jsonDecode(json) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveDataBundle(DataBundle bundle) =>
+      _prefs.setString('data_bundle', jsonEncode(bundle.toJson()));
+
+  Future<void> clearDataBundle() => _prefs.remove('data_bundle');
+
+  /// Purchase references already folded into the bundle via a top-up re-anchor,
+  /// so reopening the status screen can't double-count the same purchase.
+  bool bundleTopUpApplied(String reference) =>
+      (_prefs.getStringList('bundle_applied_topups') ?? const [])
+          .contains(reference);
+
+  Future<void> markBundleTopUpApplied(String reference) async {
+    final list = _prefs.getStringList('bundle_applied_topups') ?? [];
+    if (list.contains(reference)) return;
+    list.add(reference);
+    final capped = list.length > 50 ? list.sublist(list.length - 50) : list;
+    await _prefs.setStringList('bundle_applied_topups', capped);
+  }
 
   /// Reads and clears alerts the native background monitor
   /// ([UsageMonitorWorker]) fired while the app was closed, so the foreground

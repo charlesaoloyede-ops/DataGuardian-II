@@ -32,6 +32,8 @@ class _MainScaffoldState extends ConsumerState<MainScaffold>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       // If opened cold from a conversion-nudge notification, jump to that page.
+      // (promptUpdate:false — the launch-time check just below already covers
+      // the update sheet on a cold start, so avoid showing it twice.)
       await _consumeLaunchRoute();
       // One launch-time check for a sideloaded update.
       if (mounted) maybePromptUpdate(context);
@@ -48,14 +50,25 @@ class _MainScaffoldState extends ConsumerState<MainScaffold>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // A notification tap while the app is already alive delivers via
     // onNewIntent (not initState), so re-check the pending route on resume.
-    if (state == AppLifecycleState.resumed) _consumeLaunchRoute();
+    // A notification tap while the app is already alive resumes it; re-check the
+    // pending route and, for the update sentinel, show the sheet (the cold-start
+    // path handles that via the launch-time check instead).
+    if (state == AppLifecycleState.resumed) {
+      _consumeLaunchRoute(promptUpdate: true);
+    }
   }
 
-  Future<void> _consumeLaunchRoute() async {
+  Future<void> _consumeLaunchRoute({bool promptUpdate = false}) async {
     try {
       final route =
           await _monitorChannel.invokeMethod<String>('consumeLaunchRoute');
-      if (route != null && route.isNotEmpty && mounted) context.go(route);
+      if (route == null || route.isEmpty || !mounted) return;
+      if (route == '__check_update__') {
+        // Not a real route — the app-update notification asks for the sheet.
+        if (promptUpdate) maybePromptUpdate(context);
+        return;
+      }
+      context.go(route);
     } catch (_) {
       // No native channel / nothing pending — ignore.
     }

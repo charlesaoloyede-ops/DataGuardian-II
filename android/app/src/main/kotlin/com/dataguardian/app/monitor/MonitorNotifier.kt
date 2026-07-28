@@ -116,5 +116,12 @@ class MonitorNotifier(private val context: Context) {
         // Conversion nudges (set a budget / set limits).
         const val ID_NUDGE_BUDGET = 3005
         const val ID_NUDGE_LIMITS = 3006
+
+        // Bundle monitoring: exhaustion-risk alert (R2) and top-up nudge (R3).
+        const val ID_BUNDLE_RISK = 3007
+        const val ID_BUNDLE_TOPUP = 3008
+
+        // Out-of-app update available (R1).
+        const val ID_APP_UPDATE = 3009
     }
 }

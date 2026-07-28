@@ -2,17 +2,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../domain/entities/purchase.dart';
+import '../../domain/entities/purchase_type.dart';
 import '../format.dart';
 import '../providers/topup_providers.dart';
+import '../../../bundle/domain/bundle_math.dart';
+import '../../../bundle/presentation/providers/bundle_providers.dart';
 
 /// Watches a transaction to completion: payment → delivery, or refund/failure.
 class PurchaseStatusScreen extends ConsumerWidget {
   final String reference;
   const PurchaseStatusScreen({super.key, required this.reference});
 
+  /// When a data purchase is delivered, fold it into the monitored bundle: add
+  /// the plan's size to the current remaining and set the new expiry (a top-up
+  /// re-anchor). Idempotent per reference, and a no-op when the plan advertises
+  /// no parseable size/validity.
+  void _reanchorBundleIfDelivered(WidgetRef ref, Purchase p) {
+    if (p.status != PurchaseStatus.delivered || p.type != PurchaseType.data) {
+      return;
+    }
+    final name = p.planName;
+    if (name == null) return;
+    final size = sizeBytesFromName(name);
+    final days = validityDaysFromName(name);
+    if (size == null || days == null) return;
+    ref
+        .read(bundleRepositoryProvider)
+        .applyTopUp(
+          reference: p.reference,
+          purchasedSizeBytes: size,
+          validityDays: days,
+        )
+        .then((_) => ref.invalidate(bundleStatusProvider));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(purchaseStatusProvider(reference));
+
+    // Fold a delivered data bundle into monitoring as its status settles.
+    ref.listen(purchaseStatusProvider(reference), (_, next) {
+      final p = next.valueOrNull;
+      if (p != null) _reanchorBundleIfDelivered(ref, p);
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Your purchase')),

@@ -45,6 +45,7 @@ class NetworkStatsChannel(private val activity: MainActivity) {
                     "getNetworkStats" -> handleGetNetworkStats(call.arguments, result)
                     "getNetworkStatsByUid" -> handleGetNetworkStatsByUid(call.arguments, result)
                     "getDailyTotals" -> handleGetDailyTotals(call.arguments, result)
+                    "getMobileDeviceTotal" -> handleGetMobileDeviceTotal(call.arguments, result)
                     else -> result.notImplemented()
                 }
             }
@@ -82,6 +83,34 @@ class NetworkStatsChannel(private val activity: MainActivity) {
                 mainHandler.post {
                     result.error("NETWORK_STATS_RESTRICTED", "Per-app data unavailable on this device.", e.message)
                 }
+            } catch (e: Exception) {
+                mainHandler.post { result.error("NETWORK_STATS_FAILED", e.message, null) }
+            }
+        }
+    }
+
+    // ── getMobileDeviceTotal ─────────────────────────────────────────────────
+
+    /**
+     * Device-level total mobile bytes (rx+tx) for the window — the whole-SIM
+     * figure a data bundle is billed against, including hotspot/tethering that
+     * the per-app breakdown omits. Backs the in-app bundle card's live
+     * "remaining" so it agrees with the background monitor's alert math.
+     */
+    private fun handleGetMobileDeviceTotal(rawArgs: Any?, result: MethodChannel.Result) {
+        if (!activity.isUsageAccessGranted()) {
+            result.error("USAGE_ACCESS_REQUIRED", "Grant usage access in Settings.", null)
+            return
+        }
+        val args = rawArgs as? Map<*, *>
+        val startMs = (args?.get("startMs") as? Number)?.toLong() ?: defaultStartMs()
+        val endMs = (args?.get("endMs") as? Number)?.toLong() ?: System.currentTimeMillis()
+
+        executor.execute {
+            try {
+                val total = com.dataguardian.app.monitor.NetworkStatsQuery
+                    .mobileDeviceTotal(activity, startMs, endMs)
+                mainHandler.post { result.success(total) }
             } catch (e: Exception) {
                 mainHandler.post { result.error("NETWORK_STATS_FAILED", e.message, null) }
             }

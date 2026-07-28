@@ -138,6 +138,7 @@ class _AlertTile extends StatelessWidget {
         AlertType.threshold => (Icons.data_usage_rounded,     scheme.error),
         AlertType.background => (Icons.cloud_rounded,         const Color(0xFF1A56DB)),
         AlertType.budget    => (Icons.pie_chart_rounded,      scheme.error),
+        AlertType.bundle    => (Icons.data_saver_off_rounded, const Color(0xFFF59E0B)),
       };
 
   String _timeAgo(DateTime dt) {

@@ -20,6 +20,8 @@ import '../../features/topup/presentation/screens/topup_hub_screen.dart';
 import '../../features/topup/presentation/screens/buy_airtime_screen.dart';
 import '../../features/topup/presentation/screens/buy_data_screen.dart';
 import '../../features/topup/presentation/screens/purchase_history_screen.dart';
+import '../../features/bundle/presentation/screens/bundle_status_screen.dart';
+import '../../features/bundle/presentation/screens/bundle_setup_screen.dart';
 
 GoRouter buildRouter({required bool onboardingComplete}) {
   return GoRouter(
@@ -105,6 +107,18 @@ GoRouter buildRouter({required bool onboardingComplete}) {
                 path: 'history',
                 name: RouteNames.topUpHistory,
                 builder: (_, __) => const PurchaseHistoryScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/bundle',
+            name: RouteNames.bundle,
+            builder: (_, __) => const BundleStatusScreen(),
+            routes: [
+              GoRoute(
+                path: 'setup',
+                name: RouteNames.bundleSetup,
+                builder: (_, __) => const BundleSetupScreen(),
               ),
             ],
           ),

@@ -72,6 +72,84 @@ class MonitorPrefs(context: Context) {
         prefs.edit().putLong("nudge_last_$kind", ms).apply()
     }
 
+    // ── data bundle monitoring (R2 exhaustion / R3 top-up) ───────────────────
+
+    /**
+     * A monitored data bundle, written by Dart under `flutter.data_bundle`.
+     * Remaining = [anchorBalanceBytes] minus device-level mobile usage since
+     * [anchorAtMs]; the anchor is re-set on self-report, manual re-sync, and
+     * top-up (see the Dart BundleRepository). Null when nothing is monitored.
+     */
+    data class Bundle(
+        val anchorBalanceBytes: Long,
+        val anchorAtMs: Long,
+        val expiryMs: Long,
+        val sizeBytes: Long?,
+        val source: String,
+    )
+
+    fun readBundle(): Bundle? {
+        val raw = prefs.getString("flutter.data_bundle", null) ?: return null
+        return try {
+            val j = JSONObject(raw)
+            val anchor = j.optLong("anchorBalanceBytes", -1L)
+            val anchorAt = j.optLong("anchorAtMs", -1L)
+            val expiry = j.optLong("expiryMs", -1L)
+            if (anchor < 0 || anchorAt <= 0 || expiry <= 0) return null
+            Bundle(
+                anchorBalanceBytes = anchor,
+                anchorAtMs = anchorAt,
+                expiryMs = expiry,
+                sizeBytes = if (j.has("sizeBytes") && !j.isNull("sizeBytes")) j.optLong("sizeBytes") else null,
+                source = j.optString("source", "self_report"),
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Whether a bundle alert of [kind] has already fired for the bundle with
+     * anchor [anchorAtMs]. Re-anchoring (top-up / re-sync / new bundle) changes
+     * the anchor, so the stored flag no longer matches and the alert re-arms —
+     * a fresh bundle gets fresh alerts. Native-only keys (no `flutter.` prefix).
+     */
+    fun bundleAlertFired(kind: String, anchorAtMs: Long): Boolean =
+        prefs.getLong("bundle_alert_anchor_$kind", 0L) == anchorAtMs &&
+            prefs.getBoolean("bundle_alert_fired_$kind", false)
+
+    fun setBundleAlertFired(kind: String, anchorAtMs: Long, fired: Boolean) {
+        prefs.edit()
+            .putLong("bundle_alert_anchor_$kind", anchorAtMs)
+            .putBoolean("bundle_alert_fired_$kind", fired)
+            .apply()
+    }
+
+    /** Epoch ms since the exhaustion risk last cleared for this anchor (0 = not
+     *  clear / never). Used to re-arm R2 only after ≥24h back on track. */
+    fun bundleRiskClearSince(anchorAtMs: Long): Long =
+        if (prefs.getLong("bundle_risk_clear_anchor", 0L) == anchorAtMs)
+            prefs.getLong("bundle_risk_clear_since", 0L) else 0L
+
+    fun setBundleRiskClearSince(anchorAtMs: Long, since: Long) {
+        prefs.edit()
+            .putLong("bundle_risk_clear_anchor", anchorAtMs)
+            .putLong("bundle_risk_clear_since", since)
+            .apply()
+    }
+
+    // ── app-update push de-dup (at most once per day per pending version) ─────
+
+    fun appUpdateNotifiedVersion(): Long = prefs.getLong("app_update_notified_version", -1L)
+    fun appUpdateNotifiedDay(): String? = prefs.getString("app_update_notified_day", null)
+
+    fun setAppUpdateNotified(versionCode: Long, dayKey: String) {
+        prefs.edit()
+            .putLong("app_update_notified_version", versionCode)
+            .putString("app_update_notified_day", dayKey)
+            .apply()
+    }
+
     // ── pending-alert hand-off to the Dart Alerts Center ─────────────────────
 
     /**

@@ -10,6 +10,8 @@ import '../../../../core/widgets/app_icon_widget.dart';
 import '../../../feedback/presentation/providers/feedback_providers.dart';
 import '../../../../core/extensions/int_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../bundle/presentation/widgets/bundle_status_card.dart';
+import '../../../bundle/presentation/providers/bundle_providers.dart';
 import '../../../app_usage/domain/entities/app_usage_record.dart';
 import '../../../app_usage/domain/entities/daily_usage_summary.dart';
 import '../providers/dashboard_providers.dart';
@@ -46,6 +48,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     // Re-check after the user returns from granting usage access in Settings.
     if (state == AppLifecycleState.resumed) {
       ref.invalidate(dashboardSummaryProvider);
+      ref.invalidate(bundleStatusProvider);
     }
   }
 
@@ -92,6 +95,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             padding: const EdgeInsets.all(16),
             children: [
               if (summary.hasAnomaly) const _AnomalyBanner(),
+              const BundleHomeCard(),
+              const SizedBox(height: 16),
               _BillingCycleCard(summary: summary),
               const SizedBox(height: 16),
               _SevenDayChart(days: summary.last7Days),

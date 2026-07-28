@@ -54,6 +54,9 @@ class MainActivity : FlutterActivity() {
         pendingRoute = when (type) {
             "nudge_budget" -> "/app-usage"
             "nudge_limits" -> "/alerts/config"
+            "bundle_risk", "bundle_topup" -> "/bundle"
+            // Sentinel (not a GoRoute): the scaffold shows the update sheet.
+            "app_update" -> "__check_update__"
             else -> pendingRoute
         }
         // Clear so an activity recreate (e.g. rotation) doesn't double-count.
