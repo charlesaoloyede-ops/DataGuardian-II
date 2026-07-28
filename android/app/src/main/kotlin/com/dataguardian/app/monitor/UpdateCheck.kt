@@ -2,6 +2,7 @@ package com.dataguardian.app.monitor
 
 import android.content.Context
 import androidx.core.content.pm.PackageInfoCompat
+import com.dataguardian.app.R
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -20,9 +21,16 @@ object UpdateCheck {
     data class Available(val versionCode: Long, val versionName: String)
 
     fun check(context: Context): Available? = try {
+        // Read the Firebase project id and (client-side) API key from the
+        // resources the google-services Gradle plugin generates from
+        // google-services.json — which is gitignored — so neither is hardcoded
+        // in source. These identify the client; access is gated by Firestore
+        // Security Rules, not by keeping them secret.
+        val projectId = context.getString(R.string.project_id)
+        val apiKey = context.getString(R.string.google_api_key)
         val url = URL(
-            "https://firestore.googleapis.com/v1/projects/$PROJECT_ID" +
-                "/databases/(default)/documents/app_config/latest_release?key=$API_KEY",
+            "https://firestore.googleapis.com/v1/projects/$projectId" +
+                "/databases/(default)/documents/app_config/latest_release?key=$apiKey",
         )
         val conn = (url.openConnection() as HttpURLConnection).apply {
             connectTimeout = 8000
@@ -59,10 +67,4 @@ object UpdateCheck {
     } catch (_: Exception) {
         Long.MAX_VALUE // unknown installed version → never notify
     }
-
-    // Public Android config mirrored from android/app/google-services.json
-    // (already shipped inside the APK — these are not secrets). Kept here so the
-    // worker needs no Firebase SDK. Update if the Firebase project changes.
-    private const val PROJECT_ID = "data-guardian-2b988"
-    private const val API_KEY = "AIzaSyDH16dkSnMM5kLg69RI4dguEpcUV58hm50"
 }
