@@ -105,6 +105,21 @@ class _StatusBody extends StatelessWidget {
           subtitle:
               purchase.error ?? 'This purchase could not be completed.',
         );
+      case PurchaseStatus.abandoned:
+        final reason = purchase.paymentDeclineReason;
+        return _Result(
+          purchase: purchase,
+          icon: Icons.cancel_rounded,
+          color: Theme.of(context).colorScheme.error,
+          // Show the gateway's own reason when we have one ("Insufficient
+          // funds", "Declined"); otherwise a plain not-completed message.
+          title: reason != null ? 'Payment failed' : 'Payment not completed',
+          subtitle: reason != null
+              ? '$reason. You weren\'t charged — please try again.'
+              : 'Your payment wasn\'t completed, so this top-up didn\'t go through. You weren\'t charged.',
+          // No charge happened, so don't show a big amount that reads like one.
+          showAmount: false,
+        );
     }
   }
 }
@@ -149,6 +164,7 @@ class _Result extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool showShare;
+  final bool showAmount;
   const _Result({
     required this.purchase,
     required this.icon,
@@ -156,6 +172,7 @@ class _Result extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.showShare = false,
+    this.showAmount = true,
   });
 
   String _receiptText() {
@@ -181,11 +198,12 @@ class _Result extends StatelessWidget {
         const SizedBox(height: 8),
         Text(subtitle, textAlign: TextAlign.center),
         const SizedBox(height: 8),
-        Text(naira(purchase.amount),
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        if (showAmount)
+          Text(naira(purchase.amount),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 28),
         if (showShare)
           OutlinedButton.icon(

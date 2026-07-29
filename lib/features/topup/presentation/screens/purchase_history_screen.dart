@@ -61,6 +61,8 @@ class _HistoryTile extends StatelessWidget {
         return ('Failed', scheme.error);
       case PurchaseStatus.paid:
         return ('Delivering', scheme.tertiary);
+      case PurchaseStatus.abandoned:
+        return ('Not completed', scheme.error);
       case PurchaseStatus.initiated:
         return ('Pending', scheme.outline);
     }
