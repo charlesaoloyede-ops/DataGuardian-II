@@ -1,7 +1,7 @@
 name: data_guardian
 description: "Know where your data goes — per-app mobile & Wi-Fi usage with alerts."
 publish_to: "none"
-version: 1.7.1+9
+version: 1.7.2+10
 
 environment:
   sdk: "^3.4.0"
@@ -53,6 +53,7 @@ dependencies:
   flutter_contacts: ^1.1.9         # optional contact picker for recipient
   flutter_secure_storage: ^9.2.4   # transaction PIN hash
   crypto: ^3.0.6                   # PIN hashing
+  firebase_crashlytics: ^5.2.6
 
 dev_dependencies:
   flutter_test:

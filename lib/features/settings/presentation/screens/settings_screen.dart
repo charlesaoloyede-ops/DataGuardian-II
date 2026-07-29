@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../feedback/presentation/providers/feedback_providers.dart';
-import '../../../../core/analytics/i_analytics_service.dart';
+import '../../../../core/analytics/consent.dart';
+import '../../../../core/config/build_config.dart';
 import '../../../../core/constants/route_names.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../services/background/i_background_service_manager.dart';
@@ -89,7 +90,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ));
       await svc.setDarkMode(_darkMode);
       // Apply the opt-in immediately (governs all collection).
-      await getIt<IAnalyticsService>().setEnabled(_shareAnalytics);
+      await applyDataConsent(_shareAnalytics);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Settings saved')),
@@ -97,6 +98,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Internal builds only: fire a test report and confirm to the tester. Real
+  /// crashes flow automatically via the handlers installed in main().
+  Future<void> _sendTestCrash() async {
+    await sendTestCrashReport();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Test report sent — check Crashlytics in a few minutes'),
+        ),
+      );
     }
   }
 
@@ -288,7 +302,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => checkForUpdatesInteractive(context),
           ),
           const Divider(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
+
+          // ── Diagnostics (internal builds only) ────────────────────────────
+          if (BuildConfig.internalTools) ...[
+            Text('Diagnostics',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.bug_report_outlined, color: scheme.error),
+              title: const Text('Send test crash report'),
+              subtitle: const Text(
+                  'Internal only — verifies Crashlytics reaches the console'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: _sendTestCrash,
+            ),
+            const Divider(),
+            const SizedBox(height: 16),
+          ],
 
           FilledButton(
             onPressed: _saving ? null : _save,

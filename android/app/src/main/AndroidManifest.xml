@@ -66,6 +66,12 @@
             android:name="firebase_analytics_collection_enabled"
             android:value="false" />
 
+        <!-- Crashlytics off by default (opt-in). Enabled at runtime via
+             setCrashlyticsCollectionEnabled(true), tied to the same consent. -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="false" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

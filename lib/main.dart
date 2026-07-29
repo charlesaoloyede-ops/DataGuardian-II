@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/analytics/i_analytics_service.dart';
+import 'core/analytics/consent.dart';
 import 'core/di/injection.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -14,6 +16,16 @@ import 'services/storage/shared_prefs_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Route Flutter framework errors and uncaught async errors to Crashlytics.
+  // Handlers are always installed; whether anything is actually sent is gated
+  // by collection consent (applied below, default off).
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
   await HiveService.init();
   await configureDependencies();
 
@@ -23,9 +35,9 @@ Future<void> main() async {
   // Resolve async singletons before use.
   final prefs = await getIt.getAsync<SharedPrefsService>();
 
-  // Apply the analytics opt-in (default off → no collection until opted in).
-  await getIt<IAnalyticsService>()
-      .setEnabled(prefs.getPreferences().shareAnonymousAnalytics);
+  // Apply the data opt-in (default off → no analytics or crash collection
+  // until opted in).
+  await applyDataConsent(prefs.getPreferences().shareAnonymousAnalytics);
 
   // Invisible anonymous auth so feedback can be tied to an install without any
   // sign-in or PII. Best-effort — if offline, the feedback repo retries lazily.

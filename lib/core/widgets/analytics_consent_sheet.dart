@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../analytics/i_analytics_service.dart';
+import '../analytics/consent.dart';
 import '../di/injection.dart';
 import '../../services/storage/shared_prefs_service.dart';
 
@@ -28,7 +28,7 @@ Future<void> showAnalyticsConsentIfNeeded(BuildContext context) async {
   await prefs.savePreferences(
     prefs.getPreferences().copyWith(shareAnonymousAnalytics: enabled),
   );
-  await getIt<IAnalyticsService>().setEnabled(enabled);
+  await applyDataConsent(enabled);
 }
 
 class _AnalyticsConsentSheet extends StatelessWidget {
