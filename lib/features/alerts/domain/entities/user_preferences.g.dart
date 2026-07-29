@@ -19,6 +19,8 @@ _$UserPreferencesImpl _$$UserPreferencesImplFromJson(
           (json['billingCycleStartDay'] as num?)?.toInt() ?? -1,
       notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
       isDarkMode: json['isDarkMode'] as bool? ?? false,
+      shareAnonymousAnalytics:
+          json['shareAnonymousAnalytics'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$UserPreferencesImplToJson(
@@ -31,4 +33,5 @@ Map<String, dynamic> _$$UserPreferencesImplToJson(
       'billingCycleStartDay': instance.billingCycleStartDay,
       'notificationsEnabled': instance.notificationsEnabled,
       'isDarkMode': instance.isDarkMode,
+      'shareAnonymousAnalytics': instance.shareAnonymousAnalytics,
     };

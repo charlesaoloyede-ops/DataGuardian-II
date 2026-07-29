@@ -13,4 +13,6 @@ enum AlertType {
   background,
   @HiveField(3)
   budget,
+  @HiveField(4)
+  bundle,
 }

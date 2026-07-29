@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/analytics/i_analytics_service.dart';
 import '../../../../core/constants/route_names.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/widgets/budget_nudge_banner.dart';
+import '../../../../services/storage/shared_prefs_service.dart';
 import '../../domain/entities/alert_record.dart';
 import '../../domain/entities/alert_type.dart';
 import '../../domain/use_cases/mark_all_read_use_case.dart';
@@ -11,6 +13,16 @@ import '../providers/alert_providers.dart';
 
 class AlertsCenterScreen extends ConsumerWidget {
   const AlertsCenterScreen({super.key});
+
+  /// True until the user has set all three general data limits (daily, weekly,
+  /// and background) — drives the "Set General Data Limit" conversion callout,
+  /// which keeps showing until every limit is configured.
+  bool _limitsIncomplete() {
+    final p = getIt<SharedPrefsService>().getPreferences();
+    return p.dailyThresholdBytes == null ||
+        p.weeklyThresholdBytes == null ||
+        p.backgroundThresholdBytes == null;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,16 +50,34 @@ class AlertsCenterScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: alertsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
-        data: (alerts) => alerts.isEmpty
-            ? const _EmptyState()
-            : ListView.separated(
-                itemCount: alerts.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (_, i) => _AlertTile(alert: alerts[i]),
-              ),
+      body: Column(
+        children: [
+          if (_limitsIncomplete())
+            NudgeBanner(
+              id: 'limits',
+              icon: Icons.speed_rounded,
+              title: 'Set General Data Limit',
+              message:
+                  'Set daily, weekly, and background data limits. Get notified '
+                  'when you\'re close to a limit or when usage spikes above your '
+                  'normal average.',
+              actionLabel: 'Set Data Limit',
+              onAction: () => context.goNamed(RouteNames.alertConfig),
+            ),
+          Expanded(
+            child: alertsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text(e.toString())),
+              data: (alerts) => alerts.isEmpty
+                  ? const _EmptyState()
+                  : ListView.separated(
+                      itemCount: alerts.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) => _AlertTile(alert: alerts[i]),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -108,6 +138,7 @@ class _AlertTile extends StatelessWidget {
         AlertType.threshold => (Icons.data_usage_rounded,     scheme.error),
         AlertType.background => (Icons.cloud_rounded,         const Color(0xFF1A56DB)),
         AlertType.budget    => (Icons.pie_chart_rounded,      scheme.error),
+        AlertType.bundle    => (Icons.data_saver_off_rounded, const Color(0xFFF59E0B)),
       };
 
   String _timeAgo(DateTime dt) {

@@ -11,8 +11,19 @@
     <!-- Notifications (runtime on API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Network access for Firebase (Firestore feedback + Analytics). Auto-granted
+         at install; declared explicitly so release builds include it. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <!-- Battery optimisation exemption request (keeps the WorkManager monitor alive) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Optional contact picker for choosing a Top Up recipient -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- In-app update: install a downloaded APK (sideloaded distribution) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Required for NetworkStatsManager -->
     <uses-permission android:name="android.permission.READ_NETWORK_USAGE_HISTORY"
@@ -49,8 +60,32 @@
              which registers its own boot receiver and reschedules periodic work
              across reboots — no custom service or receiver required. -->
 
+        <!-- Analytics off by default (opt-in). Enabled at runtime via
+             setAnalyticsCollectionEnabled(true) only when the user opts in. -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+
+        <!-- Crashlytics off by default (opt-in). Enabled at runtime via
+             setCrashlyticsCollectionEnabled(true), tied to the same consent. -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="false" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- FileProvider for handing the downloaded update APK to the system
+             installer (content:// URI required on modern Android). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

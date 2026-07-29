@@ -52,9 +52,29 @@ class MonitorChannel(private val activity: MainActivity) {
                         openNotificationSettings(activity)
                         result.success(null)
                     }
+                    "consumeLaunchRoute" -> result.success(activity.consumeLaunchRoute())
+                    "sendTestNudge" -> {
+                        MonitorNotifier(activity.applicationContext).show(
+                            MonitorNotifier.ID_NUDGE_BUDGET,
+                            "nudge_budget",
+                            "Set an app data budget",
+                            "Tap here, then tap any app to set a data budget and get alerted before it overspends.",
+                        )
+                        result.success(true)
+                    }
+                    "sendTestLimitsNudge" -> {
+                        MonitorNotifier(activity.applicationContext).show(
+                            MonitorNotifier.ID_NUDGE_LIMITS,
+                            "nudge_limits",
+                            "Set your data limits",
+                            "Tap here to set daily, weekly, and background data limits and get alerted before you go over.",
+                        )
+                        result.success(true)
+                    }
                     "sendTestNotification" -> {
                         MonitorNotifier(activity.applicationContext).show(
                             MonitorNotifier.ID_TEST,
+                            "test",
                             "Test notification",
                             "Push notifications are working. You'll get alerts here.",
                         )

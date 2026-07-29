@@ -46,4 +46,14 @@ class BackgroundServiceManager implements IBackgroundServiceManager {
   Future<void> sendTestNotification() async {
     await _channel.invokeMethod<bool>('sendTestNotification');
   }
+
+  @override
+  Future<void> sendTestNudge() async {
+    await _channel.invokeMethod<bool>('sendTestNudge');
+  }
+
+  @override
+  Future<void> sendTestLimitsNudge() async {
+    await _channel.invokeMethod<bool>('sendTestLimitsNudge');
+  }
 }

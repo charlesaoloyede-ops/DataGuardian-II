@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../feedback/presentation/providers/feedback_providers.dart';
+import '../../../../core/analytics/consent.dart';
+import '../../../../core/config/build_config.dart';
+import '../../../../core/constants/route_names.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../services/background/i_background_service_manager.dart';
+import '../../../../services/security/pin_service.dart';
 import '../../../../services/storage/shared_prefs_service.dart';
+import '../../../app_update/presentation/update_flow.dart';
+import '../../../topup/presentation/widgets/topup_sheets.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,8 +23,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _billingDay;
   late bool _notificationsEnabled;
   late bool _darkMode;
+  late bool _shareAnalytics;
 
   bool _saving = false;
+  bool _hasPin = false;
 
   @override
   void initState() {
@@ -24,6 +35,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _billingDay           = prefs.billingCycleStartDay;
     _notificationsEnabled = prefs.notificationsEnabled;
     _darkMode             = prefs.isDarkMode;
+    _shareAnalytics       = prefs.shareAnonymousAnalytics;
+    _refreshPinStatus();
+  }
+
+  Future<void> _refreshPinStatus() async {
+    final has = await getIt<PinService>().hasPin();
+    if (mounted) setState(() => _hasPin = has);
+  }
+
+  Future<void> _managePin() async {
+    if (_hasPin) {
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.password_rounded),
+              title: const Text('Change PIN'),
+              onTap: () => Navigator.pop(ctx, 'change'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: const Text('Remove PIN'),
+              onTap: () => Navigator.pop(ctx, 'remove'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+      if (action == 'change' && mounted) {
+        await showPinSetupSheet(context);
+      } else if (action == 'remove') {
+        await getIt<PinService>().clearPin();
+      }
+    } else {
+      await showPinSetupSheet(context);
+    }
+    await _refreshPinStatus();
   }
 
   Future<void> _save() async {
@@ -35,8 +86,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         billingCycleStartDay: _billingDay,
         notificationsEnabled: _notificationsEnabled,
         isDarkMode: _darkMode,
+        shareAnonymousAnalytics: _shareAnalytics,
       ));
       await svc.setDarkMode(_darkMode);
+      // Apply the opt-in immediately (governs all collection).
+      await applyDataConsent(_shareAnalytics);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Settings saved')),
@@ -44,6 +98,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Internal builds only: fire a test report and confirm to the tester. Real
+  /// crashes flow automatically via the handlers installed in main().
+  Future<void> _sendTestCrash() async {
+    await sendTestCrashReport();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Test report sent — check Crashlytics in a few minutes'),
+        ),
+      );
     }
   }
 
@@ -128,7 +195,135 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Clear — use last 30 days'),
           ),
           const Divider(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
+
+          // ── Privacy ───────────────────────────────────────────────────────
+          Text('Privacy',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('Share anonymous usage data'),
+            subtitle: const Text(
+                'Help improve Data Guardian. Never includes your browsing or '
+                'which apps you use. Off by default.'),
+            value: _shareAnalytics,
+            onChanged: (v) => setState(() => _shareAnalytics = v),
+            contentPadding: EdgeInsets.zero,
+          ),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // ── Payments ──────────────────────────────────────────────────────
+          Text('Payments',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.lock_outline_rounded, color: scheme.primary),
+            title: Text(_hasPin ? 'Transaction PIN' : 'Set a transaction PIN'),
+            subtitle: Text(_hasPin
+                ? 'Used to authorise airtime & data purchases'
+                : 'Add a 4-digit PIN to confirm purchases'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: _managePin,
+          ),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // ── Help & feedback ───────────────────────────────────────────────
+          Text('Help & feedback',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.feedback_outlined, color: scheme.primary),
+            title: const Text('Send feedback'),
+            subtitle: const Text('Report a bug or suggest an improvement'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.pushNamed(RouteNames.feedback),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.forum_outlined, color: scheme.primary),
+            title: const Text('Your feedback & replies'),
+            subtitle: const Text('See replies from the team'),
+            trailing: Consumer(
+              builder: (context, ref, _) {
+                final unread = ref.watch(unreadReplyCountProvider);
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (unread > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: scheme.error,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text('$unread',
+                            style: TextStyle(
+                                color: scheme.onError,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                );
+              },
+            ),
+            onTap: () => context.pushNamed(RouteNames.myFeedback),
+          ),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // ── About ─────────────────────────────────────────────────────────
+          Text('About',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.system_update_rounded, color: scheme.primary),
+            title: const Text('Check for updates'),
+            subtitle: const Text('Download and install the latest version'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => checkForUpdatesInteractive(context),
+          ),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // ── Diagnostics (internal builds only) ────────────────────────────
+          if (BuildConfig.internalTools) ...[
+            Text('Diagnostics',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.bug_report_outlined, color: scheme.error),
+              title: const Text('Send test crash report'),
+              subtitle: const Text(
+                  'Internal only — verifies Crashlytics reaches the console'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: _sendTestCrash,
+            ),
+            const Divider(),
+            const SizedBox(height: 16),
+          ],
 
           FilledButton(
             onPressed: _saving ? null : _save,

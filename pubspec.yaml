@@ -1,7 +1,7 @@
 name: data_guardian
 description: "Know where your data goes — per-app mobile & Wi-Fi usage with alerts."
 publish_to: "none"
-version: 1.0.0+1
+version: 1.7.2+10
 
 environment:
   sdk: "^3.4.0"
@@ -41,6 +41,19 @@ dependencies:
 
   # Permissions
   permission_handler: ^11.3.1
+  firebase_core: ^4.11.0
+  firebase_analytics: ^12.4.3
+  cloud_firestore: ^6.6.0
+  firebase_auth: ^6.5.4
+
+  # Top Up (airtime & data purchase)
+  dio: ^5.7.0                      # HTTP client for the Cloudflare Worker
+  webview_flutter: ^4.10.0         # Paystack checkout
+  share_plus: ^10.1.4              # shareable receipts
+  flutter_contacts: ^1.1.9         # optional contact picker for recipient
+  flutter_secure_storage: ^9.2.4   # transaction PIN hash
+  crypto: ^3.0.6                   # PIN hashing
+  firebase_crashlytics: ^5.2.6
 
 dev_dependencies:
   flutter_test:

@@ -1,8 +1,12 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../features/alerts/domain/entities/user_preferences.dart';
+import '../../features/topup/domain/entities/beneficiary.dart';
+import '../../features/topup/domain/topup_constants.dart';
+import '../../features/bundle/domain/entities/data_bundle.dart';
 
 @lazySingleton
 class SharedPrefsService {
@@ -34,6 +38,25 @@ class SharedPrefsService {
   Future<void> setDarkMode(bool value) =>
       _prefs.setBool(AppConstants.keyDarkMode, value);
 
+  /// Whether the one-time analytics consent prompt has been shown. Used to ask
+  /// already-onboarded users about the new opt-in analytics exactly once, after
+  /// they update — without a reinstall.
+  bool get analyticsConsentPrompted =>
+      _prefs.getBool('analytics_consent_prompted') ?? false;
+
+  Future<void> setAnalyticsConsentPrompted(bool value) =>
+      _prefs.setBool('analytics_consent_prompted', value);
+
+  /// IDs of feedback threads whose reply the user has already seen — used to
+  /// show an unread badge only for replies they haven't opened yet.
+  Set<String> getSeenReplyIds() =>
+      _prefs.getStringList('seen_reply_ids')?.toSet() ?? <String>{};
+
+  Future<void> addSeenReplyIds(Iterable<String> ids) async {
+    final updated = getSeenReplyIds()..addAll(ids);
+    await _prefs.setStringList('seen_reply_ids', updated.toList());
+  }
+
   /// Returns a map of packageName → budget in bytes. Empty if none set.
   Map<String, int> getAppBudgets() {
     final json = _prefs.getString('app_budgets');
@@ -63,6 +86,133 @@ class SharedPrefsService {
 
   Future<void> setBudgetAlertCycleKey(String key) =>
       _prefs.setString('budget_alert_cycle_key', key);
+
+  /// Anonymous per-install id used to correlate a user's feedback threads
+  /// without collecting PII. Generated once, then stable for the install.
+  String getOrCreateInstallId() {
+    const key = 'install_id';
+    var id = _prefs.getString(key);
+    if (id == null || id.isEmpty) {
+      id = _generateInstallId();
+      _prefs.setString(key, id);
+    }
+    return id;
+  }
+
+  String _generateInstallId() {
+    final rnd = Random();
+    final ts = DateTime.now().microsecondsSinceEpoch.toRadixString(16);
+    final tail =
+        List.generate(8, (_) => rnd.nextInt(16).toRadixString(16)).join();
+    return 'ins_${ts}_$tail';
+  }
+
+  /// Appends a feedback submission to the local pending queue. Drained and sent
+  /// to Firestore once the Firebase layer is wired (see
+  /// docs/backend/firestore-schema.md).
+  Future<void> enqueuePendingFeedback(Map<String, dynamic> submission) async {
+    final list = _pendingFeedback()..add(submission);
+    await _prefs.setString('pending_feedback', jsonEncode(list));
+  }
+
+  List<Map<String, dynamic>> _pendingFeedback() {
+    final json = _prefs.getString('pending_feedback');
+    if (json == null || json.isEmpty) return [];
+    try {
+      return (jsonDecode(json) as List<dynamic>).cast<Map<String, dynamic>>();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Reads and clears queued feedback so the Firestore sync can flush it.
+  Future<List<Map<String, dynamic>>> drainPendingFeedback() async {
+    final list = _pendingFeedback();
+    if (list.isNotEmpty) await _prefs.remove('pending_feedback');
+    return list;
+  }
+
+  /// Saved Top Up recipients, most-recently-used first. Includes numbers typed
+  /// manually and those picked from contacts.
+  List<Beneficiary> getBeneficiaries() {
+    final json = _prefs.getString('topup_beneficiaries');
+    if (json == null || json.isEmpty) return [];
+    try {
+      final list = (jsonDecode(json) as List<dynamic>)
+          .map((e) => Beneficiary.fromJson(e as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => b.lastUsed.compareTo(a.lastUsed));
+      return list;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Upserts a beneficiary by phone number (keeping the newest name/network),
+  /// bumps it to the top, and caps the list.
+  Future<void> saveBeneficiary(Beneficiary b) async {
+    final map = {for (final e in getBeneficiaries()) e.phone: e};
+    map[b.phone] = b; // upsert
+    final list = map.values.toList()
+      ..sort((a, z) => z.lastUsed.compareTo(a.lastUsed));
+    final capped = list.take(TopUpConstants.maxBeneficiaries).toList();
+    await _prefs.setString(
+      'topup_beneficiaries',
+      jsonEncode(capped.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  Future<void> removeBeneficiary(String phone) async {
+    final list = getBeneficiaries().where((e) => e.phone != phone).toList();
+    await _prefs.setString(
+      'topup_beneficiaries',
+      jsonEncode(list.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  /// The number to prefill a purchase with — the most recently used recipient.
+  String? get defaultRecipientPhone {
+    final list = getBeneficiaries();
+    return list.isEmpty ? null : list.first.phone;
+  }
+
+  /// Whether we've offered to set up a transaction PIN during checkout. Ensures
+  /// the one-time inline offer shows at most once.
+  bool get pinSetupOffered => _prefs.getBool('topup_pin_offered') ?? false;
+  Future<void> setPinSetupOffered(bool v) =>
+      _prefs.setBool('topup_pin_offered', v);
+
+  /// The single monitored data bundle, or null if none is set up. Stored under
+  /// `data_bundle` (the plugin prefixes it `flutter.data_bundle`), the exact key
+  /// the native background monitor reads to fire the exhaustion/top-up alerts.
+  DataBundle? getDataBundle() {
+    final json = _prefs.getString('data_bundle');
+    if (json == null || json.isEmpty) return null;
+    try {
+      return DataBundle.fromJson(jsonDecode(json) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveDataBundle(DataBundle bundle) =>
+      _prefs.setString('data_bundle', jsonEncode(bundle.toJson()));
+
+  Future<void> clearDataBundle() => _prefs.remove('data_bundle');
+
+  /// Purchase references already folded into the bundle via a top-up re-anchor,
+  /// so reopening the status screen can't double-count the same purchase.
+  bool bundleTopUpApplied(String reference) =>
+      (_prefs.getStringList('bundle_applied_topups') ?? const [])
+          .contains(reference);
+
+  Future<void> markBundleTopUpApplied(String reference) async {
+    final list = _prefs.getStringList('bundle_applied_topups') ?? [];
+    if (list.contains(reference)) return;
+    list.add(reference);
+    final capped = list.length > 50 ? list.sublist(list.length - 50) : list;
+    await _prefs.setStringList('bundle_applied_topups', capped);
+  }
 
   /// Reads and clears alerts the native background monitor
   /// ([UsageMonitorWorker]) fired while the app was closed, so the foreground

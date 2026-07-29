@@ -16,7 +16,12 @@ import androidx.core.content.ContextCompat
  */
 class MonitorNotifier(private val context: Context) {
 
-    fun show(id: Int, title: String, body: String) {
+    /**
+     * Posts a data-alert notification. [type] (e.g. `daily`, `spike`, `test`)
+     * tags both the analytics "shown" event and the launch intent, so a tap can
+     * be attributed to the notification it came from.
+     */
+    fun show(id: Int, type: String, title: String, body: String) {
         if (!canPost()) return
         val notification = NotificationCompat.Builder(context, ALERT_CHANNEL_ID)
             .setSmallIcon(context.applicationInfo.icon)
@@ -24,10 +29,11 @@ class MonitorNotifier(private val context: Context) {
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(launchIntent())
+            .setContentIntent(launchIntent(id, type))
             .setAutoCancel(true)
             .build()
         notifySafely(id, notification)
+        MonitorAnalytics.logNotificationShown(context, type)
     }
 
     /**
@@ -44,7 +50,9 @@ class MonitorNotifier(private val context: Context) {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setShowWhen(false)
-            .setContentIntent(launchIntent())
+            // No type → not counted in the notification click-through funnel;
+            // this is a persistent status entry, not a push alert.
+            .setContentIntent(launchIntent(ID_ONGOING, null))
             .build()
         notifySafely(ID_ONGOING, notification)
     }
@@ -55,14 +63,21 @@ class MonitorNotifier(private val context: Context) {
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
-    private fun launchIntent(): PendingIntent? {
+    private fun launchIntent(requestCode: Int, type: String?): PendingIntent? {
         val intent = context.packageManager
             .getLaunchIntentForPackage(context.packageName)
-            ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) }
+            ?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                if (type != null) {
+                    putExtra(EXTRA_FROM_NOTIFICATION, true)
+                    putExtra(EXTRA_NOTIFICATION_TYPE, type)
+                }
+            }
             ?: return null
+        // Distinct request code per notification id so each keeps its own extras.
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or
             (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-        return PendingIntent.getActivity(context, 0, intent, flags)
+        return PendingIntent.getActivity(context, requestCode, intent, flags)
     }
 
     private fun canPost(): Boolean =
@@ -82,6 +97,10 @@ class MonitorNotifier(private val context: Context) {
         private const val ALERT_CHANNEL_ID = "data_guardian_alerts"
         private const val MONITOR_CHANNEL_ID = "data_guardian_monitor"
 
+        // Intent extras used to attribute an app-open to a notification tap.
+        const val EXTRA_FROM_NOTIFICATION = "dg_from_notification"
+        const val EXTRA_NOTIFICATION_TYPE = "dg_notification_type"
+
         // Persistent status notification.
         const val ID_ONGOING = 1000
 
@@ -93,5 +112,16 @@ class MonitorNotifier(private val context: Context) {
         const val ID_WEEKLY = 3002
         const val ID_BACKGROUND = 3003
         const val ID_SPIKE = 3004
+
+        // Conversion nudges (set a budget / set limits).
+        const val ID_NUDGE_BUDGET = 3005
+        const val ID_NUDGE_LIMITS = 3006
+
+        // Bundle monitoring: exhaustion-risk alert (R2) and top-up nudge (R3).
+        const val ID_BUNDLE_RISK = 3007
+        const val ID_BUNDLE_TOPUP = 3008
+
+        // Out-of-app update available (R1).
+        const val ID_APP_UPDATE = 3009
     }
 }

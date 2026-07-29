@@ -24,4 +24,14 @@ abstract class IBackgroundServiceManager {
   /// Posts a real system notification immediately so the user can confirm
   /// tray delivery works.
   Future<void> sendTestNotification();
+
+  /// Posts a budget conversion-nudge notification immediately (internal builds)
+  /// so the notification + its deep-link to App Usage can be verified without
+  /// waiting for the 3-day cadence.
+  Future<void> sendTestNudge();
+
+  /// Posts a limits conversion-nudge notification immediately (internal builds)
+  /// so the notification + its deep-link to the data-limit settings can be
+  /// verified without waiting for the 3-day cadence.
+  Future<void> sendTestLimitsNudge();
 }

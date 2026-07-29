@@ -25,6 +25,8 @@ import '../../features/alerts/domain/use_cases/mark_all_read_use_case.dart'
     as _i380;
 import '../../features/alerts/domain/use_cases/save_alert_use_case.dart'
     as _i680;
+import '../../features/app_update/data/update_repository.dart' as _i970;
+import '../../features/app_update/domain/i_update_repository.dart' as _i166;
 import '../../features/app_usage/data/app_usage_repository_impl.dart' as _i157;
 import '../../features/app_usage/data/daily_usage_repository_impl.dart'
     as _i734;
@@ -35,19 +37,27 @@ import '../../features/app_usage/domain/use_cases/get_app_usage_use_case.dart'
     as _i554;
 import '../../features/dashboard/domain/use_cases/get_dashboard_summary_use_case.dart'
     as _i739;
+import '../../features/feedback/data/firebase_feedback_repository.dart'
+    as _i1050;
+import '../../features/feedback/domain/i_feedback_repository.dart' as _i886;
+import '../../features/feedback/domain/use_cases/submit_feedback_use_case.dart'
+    as _i250;
 import '../../features/onboarding/data/onboarding_repository_impl.dart'
     as _i624;
 import '../../features/onboarding/domain/i_onboarding_repository.dart' as _i737;
 import '../../features/onboarding/domain/use_cases/complete_onboarding_use_case.dart'
     as _i799;
+import '../../features/topup/data/topup_repository.dart' as _i980;
+import '../../features/topup/domain/i_topup_repository.dart' as _i870;
 import '../../services/background/background_service_manager.dart' as _i697;
 import '../../services/background/i_background_service_manager.dart' as _i877;
 import '../../services/notification/i_notification_service.dart' as _i800;
 import '../../services/notification/notification_service_impl.dart' as _i68;
+import '../../services/security/pin_service.dart' as _i1007;
 import '../../services/storage/hive_service.dart' as _i13;
 import '../../services/storage/shared_prefs_service.dart' as _i86;
+import '../analytics/firebase_analytics_service.dart' as _i616;
 import '../analytics/i_analytics_service.dart' as _i26;
-import '../analytics/noop_analytics_service.dart' as _i978;
 
 extension GetItInjectableX on _i174.GetIt {
 // initializes the registration of main-scope dependencies inside of GetIt
@@ -61,10 +71,14 @@ extension GetItInjectableX on _i174.GetIt {
       environmentFilter,
     );
     gh.singleton<_i13.HiveService>(() => _i13.HiveService());
+    gh.lazySingleton<_i1007.PinService>(() => _i1007.PinService());
     gh.lazySingletonAsync<_i86.SharedPrefsService>(
         () => _i86.SharedPrefsService.create());
+    gh.lazySingleton<_i870.ITopUpRepository>(() => _i980.TopUpRepository());
     gh.lazySingleton<_i800.INotificationService>(
         () => _i68.NotificationServiceImpl());
+    gh.lazySingleton<_i886.IFeedbackRepository>(
+        () => _i1050.FirebaseFeedbackRepository());
     gh.lazySingleton<_i877.IBackgroundServiceManager>(
         () => _i697.BackgroundServiceManager());
     gh.factoryAsync<_i819.CheckBudgetUseCase>(() async =>
@@ -73,9 +87,12 @@ extension GetItInjectableX on _i174.GetIt {
         _i624.OnboardingRepositoryImpl(
             await getAsync<_i86.SharedPrefsService>()));
     gh.lazySingleton<_i26.IAnalyticsService>(
-        () => _i978.NoOpAnalyticsService());
+        () => _i616.FirebaseAnalyticsService());
+    gh.lazySingleton<_i166.IUpdateRepository>(() => _i970.UpdateRepository());
     gh.lazySingleton<_i656.IDailyUsageRepository>(
         () => _i734.DailyUsageRepositoryImpl(gh<_i13.HiveService>()));
+    gh.lazySingleton<_i250.SubmitFeedbackUseCase>(
+        () => _i250.SubmitFeedbackUseCase(gh<_i886.IFeedbackRepository>()));
     gh.factoryAsync<_i799.CompleteOnboardingUseCase>(() async =>
         _i799.CompleteOnboardingUseCase(
             await getAsync<_i737.IOnboardingRepository>()));

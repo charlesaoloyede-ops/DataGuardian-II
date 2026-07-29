@@ -14,6 +14,14 @@ import '../../features/background_usage/presentation/screens/background_usage_sc
 import '../../features/alerts/presentation/screens/alerts_center_screen.dart';
 import '../../features/alerts/presentation/screens/alert_config_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/feedback/presentation/screens/feedback_screen.dart';
+import '../../features/feedback/presentation/screens/my_feedback_screen.dart';
+import '../../features/topup/presentation/screens/topup_hub_screen.dart';
+import '../../features/topup/presentation/screens/buy_airtime_screen.dart';
+import '../../features/topup/presentation/screens/buy_data_screen.dart';
+import '../../features/topup/presentation/screens/purchase_history_screen.dart';
+import '../../features/bundle/presentation/screens/bundle_status_screen.dart';
+import '../../features/bundle/presentation/screens/bundle_setup_screen.dart';
 
 GoRouter buildRouter({required bool onboardingComplete}) {
   return GoRouter(
@@ -81,9 +89,53 @@ GoRouter buildRouter({required bool onboardingComplete}) {
             builder: (_, __) => const AlertConfigScreen(),
           ),
           GoRoute(
+            path: '/top-up',
+            name: RouteNames.topUp,
+            builder: (_, __) => const TopUpHubScreen(),
+            routes: [
+              GoRoute(
+                path: 'airtime',
+                name: RouteNames.buyAirtime,
+                builder: (_, __) => const BuyAirtimeScreen(),
+              ),
+              GoRoute(
+                path: 'data',
+                name: RouteNames.buyData,
+                builder: (_, __) => const BuyDataScreen(),
+              ),
+              GoRoute(
+                path: 'history',
+                name: RouteNames.topUpHistory,
+                builder: (_, __) => const PurchaseHistoryScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/bundle',
+            name: RouteNames.bundle,
+            builder: (_, __) => const BundleStatusScreen(),
+            routes: [
+              GoRoute(
+                path: 'setup',
+                name: RouteNames.bundleSetup,
+                builder: (_, __) => const BundleSetupScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
             path: '/settings',
             name: RouteNames.settings,
             builder: (_, __) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/feedback',
+            name: RouteNames.feedback,
+            builder: (_, __) => const FeedbackScreen(),
+          ),
+          GoRoute(
+            path: '/feedback/mine',
+            name: RouteNames.myFeedback,
+            builder: (_, __) => const MyFeedbackScreen(),
           ),
         ],
       ),

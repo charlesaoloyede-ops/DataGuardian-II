@@ -8,6 +8,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:data_guardian/core/analytics/i_analytics_service.dart';
+import 'package:data_guardian/features/feedback/presentation/providers/feedback_providers.dart';
+import 'package:data_guardian/services/storage/shared_prefs_service.dart';
 import 'package:data_guardian/features/app_usage/domain/entities/app_usage_record.dart';
 import 'package:data_guardian/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:data_guardian/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -16,6 +18,8 @@ import 'package:data_guardian/features/dashboard/presentation/screens/dashboard_
 // ── mocks ─────────────────────────────────────────────────────────────────────
 
 class MockAnalyticsService extends Mock implements IAnalyticsService {}
+
+class MockSharedPrefsService extends Mock implements SharedPrefsService {}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -51,7 +55,11 @@ DashboardSummary _fakeSummary({
 
 Widget _buildApp(Override override) {
   return ProviderScope(
-    overrides: [override],
+    overrides: [
+      override,
+      // Avoid touching Firebase/get_it for the feedback badge in tests.
+      unreadReplyCountProvider.overrideWith((ref) => 0),
+    ],
     child: MaterialApp.router(
       routerConfig: GoRouter(
         initialLocation: '/dashboard',
@@ -77,11 +85,22 @@ void main() {
     if (!GetIt.instance.isRegistered<IAnalyticsService>()) {
       GetIt.instance.registerSingleton<IAnalyticsService>(analytics);
     }
+    // The dashboard's one-time analytics-consent hook reads SharedPrefsService;
+    // stub it as already-onboarded-and-prompted so the sheet never shows.
+    final prefs = MockSharedPrefsService();
+    when(() => prefs.onboardingComplete).thenReturn(true);
+    when(() => prefs.analyticsConsentPrompted).thenReturn(true);
+    if (!GetIt.instance.isRegistered<SharedPrefsService>()) {
+      GetIt.instance.registerSingleton<SharedPrefsService>(prefs);
+    }
   });
 
   tearDown(() {
     if (GetIt.instance.isRegistered<IAnalyticsService>()) {
       GetIt.instance.unregister<IAnalyticsService>();
+    }
+    if (GetIt.instance.isRegistered<SharedPrefsService>()) {
+      GetIt.instance.unregister<SharedPrefsService>();
     }
   });
 

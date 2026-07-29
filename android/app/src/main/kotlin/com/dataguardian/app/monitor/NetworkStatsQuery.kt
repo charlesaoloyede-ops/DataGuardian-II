@@ -25,6 +25,31 @@ object NetworkStatsQuery {
     fun mobileTotal(context: Context, startMs: Long, endMs: Long): Long =
         sumPerUid(context, ConnectivityManager.TYPE_MOBILE, startMs, endMs, backgroundOnly = false)
 
+    /**
+     * Device-level total mobile bytes (rx+tx) for the window — the whole-SIM
+     * figure the carrier bills against a data bundle. Unlike [mobileTotal] (a
+     * per-UID sum), this counts traffic that belongs to no app UID: hotspot /
+     * tethering (attributed to UID_TETHERING = -5, which [sumPerUid] drops),
+     * plus VPN and system traffic. A phone sharing its data over hotspot still
+     * burns the bundle, so bundle monitoring MUST use this, not the per-app sum.
+     *
+     * subscriberId is null: since Android 11 the IMSI isn't available to normal
+     * apps, and null returns the aggregate across SIMs — which is what we want.
+     * Falls back to the per-UID sum if the OEM/platform rejects the device query
+     * (still better than zero; only misses tethering).
+     */
+    fun mobileDeviceTotal(context: Context, startMs: Long, endMs: Long): Long {
+        val nsm = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
+        return try {
+            val bucket = nsm.querySummaryForDevice(
+                ConnectivityManager.TYPE_MOBILE, null, startMs, endMs,
+            )
+            (bucket?.rxBytes ?: 0L) + (bucket?.txBytes ?: 0L)
+        } catch (_: Exception) {
+            mobileTotal(context, startMs, endMs)
+        }
+    }
+
     /** Total Wi-Fi bytes (rx+tx) across all apps for [startMs]..[endMs]. */
     fun wifiTotal(context: Context, startMs: Long, endMs: Long): Long =
         sumPerUid(context, ConnectivityManager.TYPE_WIFI, startMs, endMs, backgroundOnly = false)
